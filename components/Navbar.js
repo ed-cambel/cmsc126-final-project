@@ -21,6 +21,9 @@ export default function Navbar() {
                 <Link href="/login" className="text-sm bg-gray-900 text-white px-3 py-1.5 rounded-md hover:bg-gray-700">
                     Log in
                 </Link>
+                <Link href="/signup" className="text-sm text-gray-500 hover:text-gray-900">
+                    Sign Up
+                </Link>
             </div>
 
         </nav>
