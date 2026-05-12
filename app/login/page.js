@@ -1,17 +1,21 @@
-export default function SignupPage() {
+// login page - can log in or continue as guest
+// redirects from main page, can redirect to main page or sign up page
+// can be viewed by guest or user
+
+export default function LoginPage() {
   return (
     <div style={styles.container}>
       {/* Top Header */}
       <header style={styles.header}>
         <button style={styles.backButton}>&lt; BACK TO MAP</button>
-        <h1 style={styles.title}>SIGN UP</h1>
+        <h1 style={styles.title}>LOGIN</h1>
       </header>
 
       {/* Main Login Page */}
       <main style={styles.card}>
         {/* Tabs */}
         <div style={styles.tabContainer}>
-          <button style={{...styles.tab, ...styles.activeTab}}>SIGN UP</button>
+          <button style={{...styles.tab, ...styles.activeTab}}>LOG IN</button>
         </div>
 
         {/* Form Fields */}
@@ -33,12 +37,12 @@ export default function SignupPage() {
         <div style={styles.divider}>OR</div>
 
         {/* Secondary Buttons */}
-        <button style={styles.secondaryBtn}>LOG IN VIA UP MAIL</button>
         <button style={styles.secondaryBtn}>CONTINUE AS GUEST</button>
 
         <p style={styles.footerText}>
           Guest can view & search but cannot rate, review, or add spots.
         </p>
+        <a href="#" style={styles.link}>No account? Sign up →</a>
       </main>
     </div>
   );
