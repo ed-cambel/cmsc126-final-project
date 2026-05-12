@@ -30,6 +30,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "app/layout.js", "app/page.js", "app/signup/page.js", "app/login/page.js"  ],
+, "app/layout.js", "app/page.js", "app/signup/page.js", "app/login/page.js", "lib/supabase/client.js", "lib/supabase/server.js", "app/add/page.js", "app/discover/page.js", "app/profile/edit/page.js", "app/profile/page.js", "app/spot/[id]/page.js"  ],
   "exclude": ["node_modules"]
 }
