@@ -1,3 +1,7 @@
+// signup page - contains form for users to create an account
+// redirects from login page, redirects to login page after submission
+// can only be viewed by guest
+
 export default function SignupPage() {
   return (
     <div style={styles.container}>

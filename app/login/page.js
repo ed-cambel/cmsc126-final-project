@@ -1,3 +1,7 @@
+// login page - can log in or continue as guest
+// redirects from main page, can redirect to main page or sign up page
+// can be viewed by guest or user
+
 export default function LoginPage() {
   return (
     <div style={styles.container}>
