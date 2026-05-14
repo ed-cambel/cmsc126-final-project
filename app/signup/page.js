@@ -11,44 +11,76 @@ export default function SignupPage() {
         <h1 style={styles.title}>SIGN UP</h1>
       </header>
 
-      {/* Main Login Page */}
+      {/* Main Sign Up Page */}
       <main style={styles.card}>
         {/* Tabs */}
         <div style={styles.tabContainer}>
-          <button style={{...styles.tab, ...styles.activeTab}}>SIGN UP</button>
+          <button style={{ ...styles.tab, ...styles.activeTab }}>SIGN UP</button>
         </div>
+
+        {/* Top Button */}
+        <button style={styles.secondaryBtn}>SIGN UP VIA UP MAIL</button>
+
+        <div style={styles.divider}>OR SIGN UP MANUALLY</div>
 
         {/* Form Fields */}
         <form style={styles.form}>
-          <label style={styles.label}>Email Address</label>
-          <input type="email" placeholder="e.g juandelacruz@up.edu.ph" style={styles.input} />
-
-          <label style={styles.label}>Password</label>
-          <input type="password" placeholder="••••••••••••" style={styles.input} />
-
-          <div style={styles.row}>
-            <label><input type="checkbox" /> Remember Me</label>
-            <a href="#" style={styles.link}>Forgot password?</a>
+          
+          {/* 2-Column Row: First & Last Name */}
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <label style={styles.label}>First Name</label>
+              <input type="text" placeholder="e.g Juan" style={styles.input} />
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <label style={styles.label}>Last Name</label>
+              <input type="text" placeholder="e.g Dela Cruz" style={styles.input} />
+            </div>
           </div>
 
-          <button type="submit" style={styles.loginBtn}>LOG IN</button>
+          <label style={styles.label}>Email Address</label>
+          <input type="email" placeholder="e.g jdelacruz@up.edu.ph" style={styles.input} />
+
+          <label style={styles.label}>College</label>
+          <input type="text" placeholder="e.g College of Arts and Science" style={styles.input} />
+
+          {/* 2-Column Row: Degree & Year */}
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <label style={styles.label}>Degree Program</label>
+              <input type="text" placeholder="e.g BS Computer Science" style={styles.input} />
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <label style={styles.label}>Year Level</label>
+              <input type="text" placeholder="e.g 2nd Year" style={styles.input} />
+            </div>
+          </div>
+
+          <label style={styles.label}>Password</label>
+          <input type="password" placeholder="Min. 8 characters" style={styles.input} />
+
+          <label style={styles.label}>Confirm Password</label>
+          <input type="password" placeholder="Repeat Password" style={styles.input} />
+
+          {/* Checkbox Row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', marginBottom: '20px', fontSize: '0.9rem', color: '#004d40' }}>
+            <input type="checkbox" id="terms" />
+            <label htmlFor="terms">I agree to the terms of service and community guidelines.</label>
+          </div>
+
+          <button type="submit" style={styles.loginBtn}>CREATE ACCOUNT</button>
         </form>
 
-        <div style={styles.divider}>OR</div>
-
-        {/* Secondary Buttons */}
-        <button style={styles.secondaryBtn}>LOG IN VIA UP MAIL</button>
-        <button style={styles.secondaryBtn}>CONTINUE AS GUEST</button>
-
-        <p style={styles.footerText}>
-          Guest can view & search but cannot rate, review, or add spots.
+        <p style={{ ...styles.footerText, marginTop: '20px', marginBottom: '10px' }}>
+          You'll receive a verification email before you can log in.
         </p>
+        <a href="#" style={styles.link}>Already have an account? Log in →</a>
       </main>
     </div>
   );
 }
 
- {/* CSS Part */}
+{/* CSS Part */}
 const styles = {
   container: { 
     backgroundImage: `url('/map-background.png')`, //add the bg for the main page
