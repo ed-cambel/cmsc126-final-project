@@ -5,9 +5,20 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { ChevronLeftIcon } from '@heroicons/react/24/outline'
+
+const TAG_GROUPS = [
+  { label: 'Connectivity', category: 'connectivity', values: ['wifi', 'no_wifi', 'outlet', 'no_outlet'] },
+  { label: 'Noise', category: 'noise', values: ['silent', 'quiet', 'moderate', 'noisy'] },
+  { label: 'Environment', category: 'environment', values: ['air_conditioned', 'outdoor'] },
+  { label: 'Location', category: 'location', values: ['inside_upv', 'outside_upv'] }
+];
+
 
 export default function AddPage() {
   const [form, setForm] = useState({ name: '', address: '', description: '' });
+  const [errors, setErrors] = useState({});
   const [selectedTags, setSelectedTags] = useState({});
   const [images, setImages] = useState([]);
 
@@ -39,98 +50,127 @@ export default function AddPage() {
   };
 
   return (
-    <div>
-      <button onClick={() => window.history.back()}>Back to map</button>
-      <h1>Add Study Spot</h1>
+    <div className="min-h-screen bg-gray-50">
+      <div className="w-full">
 
-      <input
-        type="text"
-        placeholder="Location Name *"
-        value={form.name}
-        onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-      />
+        <div className='relative w-full flex items-center px-4 py-2.5 bg-white border-b border-gray-200'>
+          <Link href="/spot/123" className='flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700'>
+            <ChevronLeftIcon className='w-5 h-5' /> Back
+          </Link>
+          <h1 className='text-[32px] font-semibold absolute left-1/2 -translate-x-1/2'>Add a Study Spot</h1>
+        </div>
 
-      <input
-        type="text"
-        placeholder="Address *"
-        value={form.address}
-        onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
-      />
+        <div className="flex gap-6 px-6 py-6">
 
-      <div>[Pin on map placeholder]</div>
+          {/* LEFT COLUMN */}
+          <div className="w-[50%] flex flex-col gap-4">
 
-      <textarea
-        placeholder="Description"
-        value={form.description}
-        onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-      />
+            {/* Location Name */}
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                Location Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Eg. TLRC"
+                value={form.name}
+                onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                className={`w-full px-3 py-2 text-sm rounded-lg border ${errors.name ? 'border-red-400' : 'border-gray-300'} outline-none focus:border-[#8abe5a] bg-white`}
+              />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+            </div>
 
-      <div>
-        <p>Connectivity</p>
-        {['wifi', 'no_wifi', 'outlet', 'no_outlet'].map(val => (
-          <button
-            key={val}
-            type="button"
-            onClick={() => handleTagClick('connectivity', val)}
-          >
-            {selectedTags['connectivity'] === val ? `[${val}]` : val}
-          </button>
-        ))}
-      </div>
+            {/* Address */}
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.address}
+                onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+                className={`w-full px-3 py-2 text-sm rounded-lg border ${errors.address ? 'border-red-400' : 'border-gray-300'} outline-none focus:border-[#8abe5a] bg-white`}
+              />
+              {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
+            </div>
 
-      <div>
-        <p>Noise</p>
-        {['silent', 'quiet', 'moderate', 'noisy'].map(val => (
-          <button
-            key={val}
-            type="button"
-            onClick={() => handleTagClick('noise', val)}
-          >
-            {selectedTags['noise'] === val ? `[${val}]` : val}
-          </button>
-        ))}
-      </div>
+            {/* Pin on map */}
+            <div className="w-full flex-1 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-sm text-gray-400 bg-white">
+              [ Pin on map placeholder ]
+            </div>
 
-      <div>
-        <p>Environment</p>
-        {['air_conditioned', 'outdoor'].map(val => (
-          <button
-            key={val}
-            type="button"
-            onClick={() => handleTagClick('environment', val)}
-          >
-            {selectedTags['environment'] === val ? `[${val}]` : val}
-          </button>
-        ))}
-      </div>
+            {/* Description */}
+            <div className='flex-1 flex flex-col'>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">Description</label>
+              <textarea
+                placeholder="Describe the spot..."
+                value={form.description}
+                onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 outline-none focus:border-[#8abe5a] bg-white resize-none"
+              />
+            </div>
+          </div>
 
-      <div>
-        <p>Location</p>
-        {['inside_upv', 'outside_upv'].map(val => (
-          <button
-            key={val}
-            type="button"
-            onClick={() => handleTagClick('location', val)}
-          >
-            {selectedTags['location'] === val ? `[${val}]` : val}
-          </button>
-        ))}
-      </div>
+          {/* RIGHT COLUMN */}
+          <div className="w-[50%] flex-1 bg-[#f0f7e0] border border-[#c5e08a] rounded-2xl p-4 flex flex-col gap-4">
 
-      <div>
-        <p>Photos</p>
-        <input type="file" accept="image/*" multiple onChange={handleImageUpload} />
-        {images.map((src, i) => (
-          <div key={i}>
-            <img src={src} alt="" width={80} />
-            <button onClick={() => setImages(prev => prev.filter((_, idx) => idx !== i))}>
-              Remove
+            {TAG_GROUPS.map(({ label, category, values }) => (
+              <div key={category}>
+                <div className="bg-[#a0c840] text-white text-xs font-bold px-3 py-1.5 rounded-lg mb-2">
+                  {label}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {values.map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleTagClick(category, val)}
+                      className={`px-3 py-1 text-xs font-medium rounded-full border transition ${selectedTags[category] === val
+                        ? 'bg-[#6a9e20] text-white border-[#6a9e20]'
+                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'}`}
+                    >
+                      {val.replace(/_/g, ' ').toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Photos */}
+            <div>
+              <div className="bg-[#a0c840] text-white text-xs font-bold px-3 py-1.5 rounded-lg mb-2">
+                Photos
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <label className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-white transition text-gray-400 text-xl">
+                  +
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+                </label>
+                {images.map((src, i) => (
+                  <div key={i} className="relative w-16 h-16">
+                    <img src={src} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                    <button
+                      onClick={() => setImages(prev => prev.filter((_, idx) => idx !== i))}
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="w-full py-2.5 text-sm font-semibold rounded-xl border border-[#a0c840] text-[#4a7a10] hover:bg-[#a0c840] hover:text-white transition"
+            >
+              SUBMIT STUDY SPOT
             </button>
           </div>
-        ))}
+        </div>
       </div>
-
-      <button type="button" onClick={handleSubmit}>Submit for Review</button>
     </div>
   );
 }
