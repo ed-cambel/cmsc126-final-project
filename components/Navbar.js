@@ -11,7 +11,7 @@ export default function Navbar() {
 
     return (
         <nav className='fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-2xl'>
-            <div className='bg-white rounded-2xl flex justify-around items-center h-16 shadow-2xl'>
+            <div className='font-sans bg-white rounded-2xl flex justify-around items-center h-16 shadow-2xl'>
                 <Link href="/" className={`flex flex-col items-center justify-center gap-1 px-3 rounded-xl h-full w-full
                     ${pathname === '/' ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
                     <MapIcon className="w-5 h-5" />
