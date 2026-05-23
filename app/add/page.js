@@ -6,8 +6,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline'
 
+
+// constants for spot descriptors
 const TAG_GROUPS = [
   { label: 'Connectivity', category: 'connectivity', values: ['wifi', 'no_wifi', 'outlet', 'no_outlet'] },
   { label: 'Noise', category: 'noise', values: ['silent', 'quiet', 'moderate', 'noisy'] },
@@ -17,11 +20,13 @@ const TAG_GROUPS = [
 
 
 export default function AddPage() {
+  // state variable declarations for form inputs, tags, and images
   const [form, setForm] = useState({ name: '', address: '', description: '' });
-  const [errors, setErrors] = useState({});
   const [selectedTags, setSelectedTags] = useState({});
   const [images, setImages] = useState([]);
+  const [errors, setErrors] = useState({});
 
+  // error handling for forms
   const handleTagClick = (category, value) => {
     setSelectedTags(prev => {
       const updated = { ...prev };
@@ -34,12 +39,14 @@ export default function AddPage() {
     });
   };
 
+  // image upload handler
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     const urls = files.map(f => URL.createObjectURL(f));
     setImages(prev => [...prev, ...urls].slice(0, 3));
   };
 
+  // form submission handler
   const handleSubmit = () => {
     if (!form.name || !form.address) {
       alert('Name and address are required.');
@@ -53,6 +60,7 @@ export default function AddPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="w-full">
 
+        {/* Header */}
         <div className='relative w-full flex items-center px-4 py-2.5 bg-white border-b border-gray-200'>
           <Link href="/spot/123" className='flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700'>
             <ChevronLeftIcon className='w-5 h-5' /> Back
@@ -61,8 +69,7 @@ export default function AddPage() {
         </div>
 
         <div className="flex gap-6 px-6 py-6">
-
-          {/* LEFT COLUMN */}
+          {/* Left Column */}
           <div className="w-[50%] flex flex-col gap-4">
 
             {/* Location Name */}
@@ -94,7 +101,8 @@ export default function AddPage() {
               {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
             </div>
 
-            {/* Pin on map */}
+            {/* Pin on map -- TODO: implement Leaflet API here*/}
+
             <div className="w-full flex-1 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-sm text-gray-400 bg-white">
               [ Pin on map placeholder ]
             </div>
@@ -111,9 +119,10 @@ export default function AddPage() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN */}
+          {/* Right Columns */}
           <div className="w-[50%] flex-1 bg-[#f0f7e0] border border-[#c5e08a] rounded-2xl p-4 flex flex-col gap-4">
 
+            {/* Descriptors for page */}
             {TAG_GROUPS.map(({ label, category, values }) => (
               <div key={category}>
                 <div className="bg-[#a0c840] text-white text-xs font-bold px-3 py-1.5 rounded-lg mb-2">
@@ -136,7 +145,7 @@ export default function AddPage() {
               </div>
             ))}
 
-            {/* Photos */}
+            {/* Photo Uploader */}
             <div>
               <div className="bg-[#a0c840] text-white text-xs font-bold px-3 py-1.5 rounded-lg mb-2">
                 Photos
@@ -148,7 +157,7 @@ export default function AddPage() {
                 </label>
                 {images.map((src, i) => (
                   <div key={i} className="relative w-16 h-16">
-                    <img src={src} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                    <Image src={src} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
                     <button
                       onClick={() => setImages(prev => prev.filter((_, idx) => idx !== i))}
                       className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center"
@@ -160,7 +169,7 @@ export default function AddPage() {
               </div>
             </div>
 
-            {/* Submit */}
+            {/* Submit -- TODO: onCLick - data should be add to database */}
             <button
               type="button"
               onClick={handleSubmit}
