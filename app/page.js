@@ -5,6 +5,10 @@ import { Cog8ToothIcon } from "@heroicons/react/24/outline"
 import Link from 'next/link';
 import { ChevronRightIcon } from '@heroicons/react/16/solid';
 
+import dynamic from "next/dynamic";
+
+
+
 const FILTER_DEFS = [
   { category: "connectivity", value: "wifi", label: "WIFI" },
   { category: "connectivity", value: "no_wifi", label: "NO WIFI" },
@@ -40,6 +44,11 @@ const FILTER_GROUPS = [
   { label: 'Location', category: 'location', values: ['inside_upv', 'outside_upv'] },
 ];
 
+const MapComponent = dynamic(() => import("../components/map"), {
+  loading: () => <p>Loading map...</p>,
+  ssr: false, 
+});
+
 function getFilterLabel(category, value) {
   const def = FILTER_DEFS.find(d => d.category === category && d.value === value);
   return def ? def.label : value;
@@ -55,6 +64,8 @@ export default function StudySpotLayout() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState({});
   const [activeSpotId, setActiveSpotId] = useState(null);
+  const [zoomTrigger, setZoomTrigger] = useState(null);
+  const [locateTrigger, setLocateTrigger] = useState(0);
 
   const handleTagClick = (category, value) => {
     setSelectedFilters(prev => {
@@ -113,21 +124,35 @@ export default function StudySpotLayout() {
 
         {/* MAP — 3/4 */}
         <div className="flex-[3] relative bg-green-100">
-          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
-            [ INTERACTIVE MAP BACKGROUND ]
-          </div>
+          
+            <div className="absolute inset-0 w-full h-full z-0">
+                <MapComponent zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} />
+              </div>
 
-          {/* Map controls */}
-          <div className="absolute bottom-4 right-4 flex flex-col gap-1">
-            {['⌖', '+', '−'].map((icon, i) => (
+              {/* Active Map Controls */}
+            <div className="absolute bottom-4 right-4 flex flex-col gap-1 z-[1000]">
+              {/* Current Location Target Button */}
               <button
-                key={i}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm"
+                onClick={() => setLocateTrigger(prev => prev + 1)}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
               >
-                {icon}
+                ⌖
               </button>
-            ))}
-          </div>
+              {/* Zoom In Button */}
+              <button
+                onClick={() => { setZoomTrigger("in"); setTimeout(() => setZoomTrigger(null), 50); }}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              >
+                +
+              </button>
+              {/* Zoom Out Button */}
+              <button
+                onClick={() => { setZoomTrigger("out"); setTimeout(() => setZoomTrigger(null), 50); }}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              >
+                -
+              </button>
+            </div>
         </div>
 
         {/* SPOT LIST — 1/4 */}
