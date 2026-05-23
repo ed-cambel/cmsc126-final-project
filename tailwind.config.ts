@@ -12,6 +12,10 @@ const config: Config = {
                 sans: ['var(--font-inter)', 'sans-serif'], // default body font
                 poppins: ['var(--font-poppins)', 'sans-serif'], // headings / special UI
             },
+
+            colors: {
+                linen: '#F5F2EA',
+            },
         },
     },
     plugins: [],
