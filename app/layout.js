@@ -20,7 +20,6 @@ const poppins = Poppins({
 import Navbar from '@/components/Navbar'
 import Searchbar from '@/components/Searchbar'
 
-
 export default function RootLayout({ children }) {
   const pathname = usePathname()
   const hideNavbar = ['/login', '/signup']
@@ -30,7 +29,7 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${poppins.variable} antialiased overflow-hidden`}>
+      <body className={`bg-[#F5F2EA] ${inter.variable} ${poppins.variable} antialiased overflow-hidden`}>
         {!shouldHideSearchbar && <Searchbar />}
         {children}
         {!shouldHideNavbar && <Navbar />}
