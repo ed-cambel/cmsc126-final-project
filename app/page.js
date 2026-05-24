@@ -1,10 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Cog8ToothIcon } from "@heroicons/react/24/outline"
+import dynamic from 'next/dynamic';
+
 import Link from 'next/link';
 import Filterbar from '@/components/Filterbar';
 import { ChevronRightIcon } from '@heroicons/react/16/solid';
+
+import FindMyLocation from '@/components/Findloc';
+
+const MapContainer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+
+const TileLayer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.TileLayer),
+  { ssr: false }
+);
 
 const ALL_SPOTS = [
   { id: 1, name: "ICS Lobby", tags: { connectivity: "wifi", noise: "moderate", environment: "air_conditioned", location: "inside_upv" }, rating: 4.5, dist: "0.1 km" },
@@ -64,22 +77,31 @@ export default function StudySpot() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* MAP — 3/4 */}
-        <div className="flex-[3] relative bg-green-100">
-          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
-            [ INTERACTIVE MAP BACKGROUND ]
-          </div>
+        <div className="flex-[3] relative">
 
-          {/* Map controls */}
-          <div className="absolute bottom-4 left-4 flex flex-col gap-1">
-            {['⌖', '+', '−'].map((icon, i) => (
+          <MapContainer
+            center={[10.3157, 123.8854]}
+            zoom={16}
+            className="w-full h-full z-0"
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+
+            <FindMyLocation />
+          </MapContainer>
+
+          {/* <div className="absolute bottom-4 left-4 flex flex-col gap-1 z-[1000]">
+            {['+', '−'].map((icon, i) => (
               <button
                 key={i}
-                className="w-8 h-8 flex items-center justify-center bg-[#F5F2EA] border-[#D4CCBA] rounded-md shadow-sm hover:bg-gray-50 text-sm"
+                className="w-8 h-8 flex items-center justify-center bg-[#F5F2EA] rounded-md shadow"
               >
                 {icon}
               </button>
             ))}
-          </div>
+          </div> */}
+
         </div>
 
         {/* SPOT LIST — 1/4 */}
