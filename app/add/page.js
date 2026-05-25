@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronLeftIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 
 // constants for spot descriptors
@@ -48,8 +48,16 @@ export default function AddPage() {
 
   // form submission handler
   const handleSubmit = () => {
+    const newErrors = {};
     if (!form.name || !form.address) {
-      alert('Name and address are required.');
+      newErrors.name = !form.name ? 'Name is required.' : '';
+      newErrors.address = !form.address ? 'Address is required.' : '';
+      setErrors(newErrors);
+      return;
+    }
+
+    if (Object.keys(selectedTags).length > 0) {
+      setErrors(newErrors);
       return;
     }
     console.log({ ...form, tags: selectedTags, images });
@@ -61,44 +69,46 @@ export default function AddPage() {
       <div className="w-full">
 
         {/* Header */}
-        <div className='relative w-full flex items-center px-4 py-2.5 bg-white border-b border-gray-200'>
-          <Link href="/spot/123" className='flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700'>
-            <ChevronLeftIcon className='w-5 h-5' /> Back
+        <div className='relative w-full flex items-center px-6 py-3 border-[#0F2D1C] bg-[#F5F2EA] border-b-2 '>
+          <Link href="/spot/123" className='flex items-center gap-1 text-base font-medium text-[#0F2D1C] hover:text-[#C4811A] transition'>
+            <ChevronLeftIcon className='w-6 h-6' /> Back
           </Link>
-          <h1 className='text-[32px] font-semibold absolute left-1/2 -translate-x-1/2'>Add a Study Spot</h1>
+          <h1 className='text-xl font-bold text-[#0F2D1C] absolute left-1/2 -translate-x-1/2 tracking-wide uppercase'>Add a Study Spot</h1>
         </div>
 
-        <div className="flex gap-6 px-6 py-6">
+        <div className="flex flex-1 gap-6 px-6 py-6 style={{ minHeight: 'calc(100vh - 57px)' }">
           {/* Left Column */}
           <div className="w-[50%] flex flex-col gap-4">
 
             {/* Location Name */}
             <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">
-                Location Name <span className="text-red-500">*</span>
+              <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider">
+                Location Name <span className="text-[#B33A1A]">*</span>
               </label>
               <input
+                required
                 type="text"
-                placeholder="Eg. TLRC"
+                placeholder="Eg. Campus Union Building - TLRC"
                 value={form.name}
                 onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                className={`w-full px-3 py-2 text-sm rounded-lg border ${errors.name ? 'border-red-400' : 'border-gray-300'} outline-none focus:border-[#8abe5a] bg-white`}
+                className={`w-full px-3 py-2 text-sm rounded-lg border outline-none focus:border-[#0F2D1C] bg-white text-[#0F2D1C] placeholder-[#D4CCBA] transition ${errors.name ? 'border-[#B33A1A] border-2' : 'border-[#D4CCBA]'}`}
               />
-              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+              {errors.name && <p className="text-xs text-[#B33A1A] mt-1">{errors.name}</p>}
             </div>
 
             {/* Address */}
             <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">
-                Address <span className="text-red-500">*</span>
+              <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider">
+                Address <span className="text-[#B33A1A]">*</span>
               </label>
               <input
+                required
                 type="text"
                 value={form.address}
                 onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
-                className={`w-full px-3 py-2 text-sm rounded-lg border ${errors.address ? 'border-red-400' : 'border-gray-300'} outline-none focus:border-[#8abe5a] bg-white`}
+                className={`w-full px-3 py-2 text-sm rounded-lg border outline-none focus:border-[#0F2D1C] bg-white text-[#0F2D1C] placeholder-[#D4CCBA] transition ${errors.address ? 'border-[#B33A1A] border-2' : 'border-[#D4CCBA]'}`}
               />
-              {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
+              {errors.address && <p className="text-xs text-[#B33A1A] mt-1">{errors.address}</p>}
             </div>
 
             {/* Pin on map -- TODO: implement Leaflet API here*/}
@@ -109,23 +119,24 @@ export default function AddPage() {
 
             {/* Description */}
             <div className='flex-1 flex flex-col'>
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">Description</label>
+              <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider">Description</label>
               <textarea
                 placeholder="Describe the spot..."
                 value={form.description}
+                rows={4}
                 onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 outline-none focus:border-[#8abe5a] bg-white resize-none"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#D4CCBA] outline-none focus:border-[#0F2D1C] bg-white text-[#0F2D1C] placeholder:[#D4CCBA] resize-none transition"
               />
             </div>
           </div>
 
           {/* Right Columns */}
-          <div className="w-[50%] flex-1 bg-[#f0f7e0] border border-[#c5e08a] rounded-2xl p-4 flex flex-col gap-4">
+          <div className="w-[50%] flex flex-col bg-[#0F2D1C] border border-[#c5e08a] rounded-2xl p-5 gap-4">
 
             {/* Descriptors for page */}
             {TAG_GROUPS.map(({ label, category, values }) => (
               <div key={category}>
-                <div className="bg-[#a0c840] text-white text-xs font-bold px-3 py-1.5 rounded-lg mb-2">
+                <div className="text-[#CFA000] text-[10px] uppercase tracking-widest font-bold rounded-lg mb-2">
                   {label}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -134,9 +145,9 @@ export default function AddPage() {
                       key={val}
                       type="button"
                       onClick={() => handleTagClick(category, val)}
-                      className={`px-3 py-1 text-xs font-medium rounded-full border transition ${selectedTags[category] === val
-                        ? 'bg-[#6a9e20] text-white border-[#6a9e20]'
-                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'}`}
+                      className={`px-3 py-1 text-[10px] font-semibold rounded-full border transition uppercase tracking-wide ${selectedTags[category] === val
+                        ? 'bg-[#CFA000] text-[#0F2D1C] border-[#CFA000]'
+                        : 'bg-transparent text-[#D4CCBA] border-[#1E4A2A] hover:border-[#D4CCBA]'}`}
                     >
                       {val.replace(/_/g, ' ').toUpperCase()}
                     </button>
@@ -145,24 +156,27 @@ export default function AddPage() {
               </div>
             ))}
 
+            {/* Divider */}
+            <div className="border-t border-[#1E4A2A]" />
+
             {/* Photo Uploader */}
             <div>
-              <div className="bg-[#a0c840] text-white text-xs font-bold px-3 py-1.5 rounded-lg mb-2">
+              <div className="text-[#CFA000] text-[10px] font-bold uppercase tracking-widest mb-2">
                 Photos
               </div>
               <div className="flex gap-2 flex-wrap">
-                <label className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-white transition text-gray-400 text-xl">
+                <label className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-[#1E4A2A] rounded-lg cursor-pointer hover:border-[#D4CCBA] transition text-[#D4CCBA] text-xl">
                   +
                   <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
                 </label>
                 {images.map((src, i) => (
                   <div key={i} className="relative w-16 h-16">
-                    <Image src={src} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                    <Image src={src} alt="" fill className="object-cover rounded-lg border border-[#1E4A2A]" />
                     <button
                       onClick={() => setImages(prev => prev.filter((_, idx) => idx !== i))}
-                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center"
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-[#B33A1A] text-white rounded-full text-[10px] flex items-center justify-center"
                     >
-                      ✕
+                      <XMarkIcon className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
@@ -173,7 +187,7 @@ export default function AddPage() {
             <button
               type="button"
               onClick={handleSubmit}
-              className="w-full py-2.5 text-sm font-semibold rounded-xl border border-[#a0c840] text-[#4a7a10] hover:bg-[#a0c840] hover:text-white transition"
+              className="mt-auto w-full py-2.5 text-sm font-bold rounded-xl bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition-all duration-200 uppercase tracking-widest flex items-center justify-center gap-2 group"
             >
               SUBMIT STUDY SPOT
             </button>
