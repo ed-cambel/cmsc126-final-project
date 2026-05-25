@@ -7,8 +7,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { createClient } from '@/lib/supabase/client';
+import { ChevronLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
+const supabase = createClient();
 
 // constants for spot descriptors
 const TAG_GROUPS = [
@@ -47,7 +49,7 @@ export default function AddPage() {
   };
 
   // form submission handler
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const newErrors = {};
     if (!form.name || !form.address) {
       newErrors.name = !form.name ? 'Name is required.' : '';
@@ -56,10 +58,30 @@ export default function AddPage() {
       return;
     }
 
-    if (Object.keys(selectedTags).length > 0) {
+    if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
+
+    const {data: {user} } = await supabase.auth.getUser();
+
+    const {error} = await supabase.from('spots').insert({
+      name: form.name,
+      address: form.address,
+      description: form.description,
+      added_by: user?.id,
+      has_wifi: selectedTags.connectivity === 'wifi',
+      has_outlets: selectedTags.connectivity === 'outlet',
+      noise_level: selectedTags.noise,
+      environment: selectedTags.environment,
+      location_type: selectedTags.location,
+    })
+
+    if (error) {
+      alert('Error submitting spot: ' + error.message);
+      return;
+    }
+
     console.log({ ...form, tags: selectedTags, images });
     alert('Submitted!');
   };

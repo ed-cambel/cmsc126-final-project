@@ -83,15 +83,15 @@ export default function StudySpot() {
         </div>
 
         {/* SPOT LIST — 1/4 */}
-        <div className="flex-1 flex flex-col border-l border-[#D4CCBA] bg-[#F5F2EA] hover:bg-[#EBE6D8]overflow-hidden min-w-55">
-          <div className="px-4 py-3 border-b border-[#2A241E] shrink-0">
-            <span className="text-sm font-semibold text-[#2A241E]">Study Spots</span>
-            <span className="text-xs text-[#6B6355] ml-2">{filteredSpots.length} found</span>
+        <div className="flex-1 flex flex-col border-2 border-[#0F2D1C] bg-[#F5F2EA] hover:bg-[#EBE6D8]overflow-hidden min-w-55">
+          <div className="px-4 py-3 border-b-2 border-[#0F2D1C] shrink-0">
+            <span className="text-sm font-semibold text-[#0F2D1C]">Study Spots</span>
+            <span className="text-xs text-[#0F2D1C] ml-2">{filteredSpots.length} found</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
             {filteredSpots.length === 0 ? (
-              <div className="text-center text-xs text-[#6B6355] mt-8">
+              <div className="text-center text-xs text-[#0F2D1C] mt-8">
                 No spots match your filters.
               </div>
             ) : (
@@ -100,16 +100,16 @@ export default function StudySpot() {
                   key={spot.id}
                   onClick={() => setActiveSpotId(spot.id)}
                   className={`p-3 rounded-lg border cursor-pointer transition-all grid grid-cols-[1fr_auto] items-center gap-2 ${activeSpotId === spot.id
-                    ? 'border-[#0F2D1C] bg-[#EBE6D8]'
-                    : 'border-[#D4CCBA] bg-[#F5F2EA] hover:bg-[#EBE6D8]'
+                    ? 'border-[#0F2D1C]  bg-[#C4811A] border-2 text-[#F5F2EA]'
+                    : 'border-[#0F2D1C] bg-[#F5F2EA] hover:bg-[#C4811A] hover:border-[#0F2D1C] hover:border-2'
                     }`}
                 >
                   <div>
-                    <div className="text-xs font-semibold text-[#2A241E] mb-0.5">{spot.name}</div>
-                    <div className="text-[10px] text-[#6B6355] mb-2">★ {spot.rating} · {spot.dist}</div>
+                    <div className="text-xs font-semibold text-[#0F2D1C] mb-0.5">{spot.name}</div>
+                    <div className="text-[10px] text-[#0F2D1C] mb-2">★ {spot.rating} · {spot.dist}</div>
                     <div className="flex flex-wrap gap-1">
                       {Object.entries(spot.tags).map(([cat, val]) => (
-                        <span key={cat} className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#6B6355] border border-[#D4CCBA]">
+                        <span key={cat} className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">
                           {getFilterLabel(cat, val)}
                         </span>
                       ))}
