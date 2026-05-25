@@ -1,21 +1,15 @@
+// main landing page with map and spot list
+// can be viewed by guest or user
+
 'use client';
 
-import { useState } from 'react';
-import { Cog8ToothIcon } from "@heroicons/react/24/outline"
 import Link from 'next/link';
 import Filterbar from '@/components/Filterbar';
 import { ChevronRightIcon } from '@heroicons/react/16/solid';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
-const ALL_SPOTS = [
-  { id: 1, name: "ICS Lobby", tags: { connectivity: "wifi", noise: "moderate", environment: "air_conditioned", location: "inside_upv" }, rating: 4.5, dist: "0.1 km" },
-  { id: 2, name: "Main Library", tags: { connectivity: "wifi", noise: "silent", environment: "air_conditioned", location: "inside_upv" }, rating: 4.8, dist: "0.3 km" },
-  { id: 3, name: "AS Garden", tags: { connectivity: "no_wifi", noise: "quiet", environment: "outdoor", location: "inside_upv" }, rating: 4.2, dist: "0.4 km" },
-  { id: 4, name: "Café Morado", tags: { connectivity: "wifi", noise: "moderate", environment: "air_conditioned", location: "outside_upv" }, rating: 4.6, dist: "0.6 km" },
-  { id: 5, name: "SOLAIR Benches", tags: { connectivity: "no_wifi", noise: "quiet", environment: "outdoor", location: "inside_upv" }, rating: 3.9, dist: "0.2 km" },
-  { id: 6, name: "Engineering Reading Room", tags: { connectivity: "wifi", noise: "silent", environment: "air_conditioned", location: "inside_upv" }, rating: 4.7, dist: "0.5 km" },
-  { id: 7, name: "Jollibee Miagao", tags: { connectivity: "wifi", noise: "noisy", environment: "air_conditioned", location: "outside_upv" }, rating: 3.5, dist: "1.2 km" },
-  { id: 8, name: "Open Pavilion", tags: { connectivity: "no_wifi", noise: "moderate", environment: "outdoor", location: "inside_upv" }, rating: 4.0, dist: "0.3 km" },
-];
+const supabase = createClient();
 
 // constants for filter options
 const FILTER_DEFS = [
@@ -41,16 +35,35 @@ function getFilterLabel(category, value) {
 }
 
 function matchesFilters(spot, selectedFilters) {
-  return Object.entries(selectedFilters).every(
-    ([category, value]) => spot.tags[category] === value
-  );
+  return Object.entries(selectedFilters).every(([category, value]) => {
+    if (category === 'connectivity') return value === 'wifi' ? spot.has_wifi : !spot.has_wifi;
+    if (category === 'noise') return spot.noise_level === value;
+    if (category === 'environment') return spot.environment === value;
+    if (category === 'location') return spot.location_type === value;
+    return true;
+  });
 }
 
 export default function StudySpot() {
+  const [spots, setSpots] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState({});
   const [activeSpotId, setActiveSpotId] = useState(null);
 
-  const filteredSpots = ALL_SPOTS.filter(spot => matchesFilters(spot, selectedFilters));
+  useEffect(() => {
+    const fetchSpots = async () => {
+      const { data, error } = await supabase.from('spots').select('*');
+      if (error) {
+        console.error('Error fetching spots:', error);
+      } else {
+        setSpots(data);
+        setLoading(false);
+      }
+    };
+    fetchSpots();
+  }, []);
+
+  const filteredSpots = spots.filter(spot => matchesFilters(spot, selectedFilters));
 
   return (
     <div className="flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 57px)' }}>
@@ -64,7 +77,7 @@ export default function StudySpot() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* MAP — 3/4 */}
-        <div className="flex-[3] relative bg-green-100">
+        <div className="flex-3 relative bg-green-100">
           <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
             [ INTERACTIVE MAP BACKGROUND ]
           </div>
@@ -108,11 +121,12 @@ export default function StudySpot() {
                     <div className="text-xs font-semibold text-[#0F2D1C] mb-0.5">{spot.name}</div>
                     <div className="text-[10px] text-[#0F2D1C] mb-2">★ {spot.rating} · {spot.dist}</div>
                     <div className="flex flex-wrap gap-1">
-                      {Object.entries(spot.tags).map(([cat, val]) => (
-                        <span key={cat} className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">
-                          {getFilterLabel(cat, val)}
-                        </span>
-                      ))}
+                      <div className="flex flex-wrap gap-1">
+                        {spot.has_wifi && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">WIFI</span>}
+                        {spot.noise_level && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">{getFilterLabel('noise', spot.noise_level)}</span>}
+                        {spot.environment && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">{getFilterLabel('environment', spot.environment)}</span>}
+                        {spot.location_type && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">{getFilterLabel('location', spot.location_type)}</span>}
+                      </div>
                     </div>
                   </div>
 
