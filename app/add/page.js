@@ -8,6 +8,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import { ChevronLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 const supabase = createClient();
@@ -22,6 +23,7 @@ const TAG_GROUPS = [
 
 
 export default function AddPage() {
+  const router = useRouter();
   // state variable declarations for form inputs, tags, and images
   const [form, setForm] = useState({ name: '', address: '', description: '' });
   const [selectedTags, setSelectedTags] = useState({});
@@ -86,15 +88,17 @@ export default function AddPage() {
 
     console.log({ ...form, tags: selectedTags, images });
     alert('Submitted!');
+
+    router.push('/'); // redirect to main page after submission
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F5F2EA]">
       <div className="w-full">
 
         {/* Header */}
         <div className='relative w-full flex items-center px-6 py-3 border-[#0F2D1C] bg-[#F5F2EA] border-b-2 '>
-          <Link href="/spot/123" className='flex items-center gap-1 text-base font-medium text-[#0F2D1C] hover:text-[#C4811A] transition'>
+          <Link href="/" className='flex items-center gap-1 text-base font-medium text-[#0F2D1C] hover:text-[#C4811A] transition'>
             <ChevronLeftIcon className='w-6 h-6' /> Back
           </Link>
           <h1 className='text-xl font-bold text-[#0F2D1C] absolute left-1/2 -translate-x-1/2 tracking-wide uppercase'>Add a Study Spot</h1>
