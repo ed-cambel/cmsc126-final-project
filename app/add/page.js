@@ -75,6 +75,8 @@ export default function AddPage() {
       noise_level: selectedTags.noise,
       environment: selectedTags.environment,
       location_type: selectedTags.location,
+      lat: 0,
+      lng: 0 // TODO: integrate geocoding API to get lat/lang from address
     })
 
     if (error) {
