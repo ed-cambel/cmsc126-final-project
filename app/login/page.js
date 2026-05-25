@@ -1,12 +1,12 @@
+// login page - can log in or continue as guest
+// redirects from main page, can redirect to main page or sign up page
+// can be viewed by guest or user
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-
-// login page - can log in or continue as guest
-// redirects from main page, can redirect to main page or sign up page
-// can be viewed by guest or user
 
 export default function LoginPage() {
   const supabase = createClient();

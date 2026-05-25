@@ -5,26 +5,31 @@ import { usePathname } from 'next/navigation'
 // import font
 import { Inter, Poppins } from 'next/font/google'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+})
+
 const poppins = Poppins({
   subsets: ['latin'],
-  weight: ['400', '700', '900']
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-poppins',
 })
 
 // import components
 import Navbar from '@/components/Navbar'
 import Searchbar from '@/components/Searchbar'
 
-
 export default function RootLayout({ children }) {
   const pathname = usePathname()
   const hideNavbar = ['/login', '/signup']
-  const shouldHideSearchbar = hideNavbar.includes(pathname) || pathname.startsWith('/spot/')
+  const hideSearchbar = ['/login', '/signup', '']
+  const shouldHideSearchbar = hideSearchbar.includes(pathname) || pathname.startsWith('/spot/')
   const shouldHideNavbar = hideNavbar.includes(pathname)
 
   return (
     <html lang="en">
-      <body className={`${inter.className} ${poppins.className} antialiased overflow-hidden`}>
+      <body className={`bg-[#F5F2EA] ${inter.variable} ${poppins.variable} antialiased overflow-hidden`}>
         {!shouldHideSearchbar && <Searchbar />}
         {children}
         {!shouldHideNavbar && <Navbar />}
