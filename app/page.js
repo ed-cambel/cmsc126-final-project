@@ -8,6 +8,7 @@ import Filterbar from '@/components/Filterbar';
 import { ChevronRightIcon } from '@heroicons/react/16/solid';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useSearch } from '@/context/SearchContext';
 
 const supabase = createClient();
 
@@ -54,12 +55,14 @@ function matchesFilters(spot, selectedFilters) {
 }
 
 export default function StudySpot() {
+  const { searchLocation } = useSearch();
   const [spots, setSpots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState({});
   const [activeSpotId, setActiveSpotId] = useState(null);
   const [zoomTrigger, setZoomTrigger] = useState(null);
   const [locateTrigger, setLocateTrigger] = useState(0);
+  
 
   useEffect(() => {
     const fetchSpots = async () => {
@@ -91,7 +94,7 @@ export default function StudySpot() {
         <div className="flex-3 relative bg-green-100">
           
             <div className="absolute inset-0 w-full h-full z-0">
-                <MapComponent zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} />
+                <MapComponent zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} searchLocation={searchLocation}/>
               </div>
 
               {/* Active Map Controls */}
