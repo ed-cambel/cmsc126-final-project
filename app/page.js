@@ -89,34 +89,31 @@ export default function StudySpot() {
         {/* MAP  */}
         <div className="flex-3 relative bg-green-100">
 
-          <div className="absolute inset-0 w-full h-full z-0">
-            <MapComponent zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} searchLocation={searchLocation} />
-          </div>
+              {/* Active Map Controls */}
+              <div className="absolute top-4 right-4 flex flex-col gap-1 z-[1000]">
 
-          {/* Active Map Controls */}
-          <div className="absolute bottom-4 left-4 flex flex-col gap-1 z-[1000]">
-            {/* Current Location Target Button */}
-            <button
-              onClick={() => setLocateTrigger(prev => prev + 1)}
-              className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
-            >
-              ⌖
-            </button>
-            {/* Zoom In Button */}
-            <button
-              onClick={() => { setZoomTrigger("in"); setTimeout(() => setZoomTrigger(null), 50); }}
-              className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
-            >
-              +
-            </button>
-            {/* Zoom Out Button */}
-            <button
-              onClick={() => { setZoomTrigger("out"); setTimeout(() => setZoomTrigger(null), 50); }}
-              className="w-8 h-8 flex items-center justify-center bg-[#F5F2EA] border-[#D4CCBA] rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
-            >
-              -
-            </button>
-          </div>
+              {/* Current Location Target Button */}
+              <button
+                onClick={() => setLocateTrigger(prev => prev + 1)}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              >
+                ⌖
+              </button>
+              {/* Zoom In Button */}
+              <button
+                onClick={() => { setZoomTrigger("in"); setTimeout(() => setZoomTrigger(null), 50); }}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              >
+                +
+              </button>
+              {/* Zoom Out Button */}
+              <button
+                onClick={() => { setZoomTrigger("out"); setTimeout(() => setZoomTrigger(null), 50); }}
+                className="w-8 h-8 flex items-center justify-center bg-[#F5F2EA] border-[#D4CCBA] rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              >
+                -
+              </button>
+            </div>
         </div>
 
         {/* SPOT LIST — 1/4 */}
