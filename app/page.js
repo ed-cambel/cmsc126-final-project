@@ -1,11 +1,18 @@
-'use client';
+// main landing page with map and spot list
+// can be viewed by guest or user
 
-import { useState } from 'react';
-import dynamic from 'next/dynamic';
+'use client';
 
 import Link from 'next/link';
 import Filterbar from '@/components/Filterbar';
 import { ChevronRightIcon } from '@heroicons/react/16/solid';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
+const supabase = createClient();
+
+import dynamic from "next/dynamic";
+
 
 import FindMyLocation from '@/components/Findloc';
 
@@ -48,22 +55,48 @@ const FILTER_DEFS = [
   { category: "location", value: "outside_upv", label: "OUTSIDE UPV" },
 ];
 
+const MapComponent = dynamic(() => import("../components/map"), {
+  loading: () => <p>Loading map...</p>,
+  ssr: false, 
+});
+
 function getFilterLabel(category, value) {
   const def = FILTER_DEFS.find(d => d.category === category && d.value === value);
   return def ? def.label : value;
 }
 
 function matchesFilters(spot, selectedFilters) {
-  return Object.entries(selectedFilters).every(
-    ([category, value]) => spot.tags[category] === value
-  );
+  return Object.entries(selectedFilters).every(([category, value]) => {
+    if (category === 'connectivity') return value === 'wifi' ? spot.has_wifi : !spot.has_wifi;
+    if (category === 'noise') return spot.noise_level === value;
+    if (category === 'environment') return spot.environment === value;
+    if (category === 'location') return spot.location_type === value;
+    return true;
+  });
 }
 
 export default function StudySpot() {
+  const [spots, setSpots] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState({});
   const [activeSpotId, setActiveSpotId] = useState(null);
+  const [zoomTrigger, setZoomTrigger] = useState(null);
+  const [locateTrigger, setLocateTrigger] = useState(0);
 
-  const filteredSpots = ALL_SPOTS.filter(spot => matchesFilters(spot, selectedFilters));
+  useEffect(() => {
+    const fetchSpots = async () => {
+      const { data, error } = await supabase.from('spots').select('*');
+      if (error) {
+        console.error('Error fetching spots:', error);
+      } else {
+        setSpots(data);
+        setLoading(false);
+      }
+    };
+    fetchSpots();
+  }, []);
+
+  const filteredSpots = spots.filter(spot => matchesFilters(spot, selectedFilters));
 
   return (
     <div className="flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 57px)' }}>
@@ -96,24 +129,48 @@ export default function StudySpot() {
               <button
                 key={i}
                 className="w-8 h-8 flex items-center justify-center bg-[#F5F2EA] rounded-md shadow"
-              >
-                {icon}
-              </button>
-            ))}
-          </div> */}
+        <div className="flex-3 relative bg-green-100">
+          
+            <div className="absolute inset-0 w-full h-full z-0">
+                <MapComponent zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} />
+              </div>
 
+              {/* Active Map Controls */}
+            <div className="absolute bottom-4 left-4 flex flex-col gap-1 z-[1000]">
+              {/* Current Location Target Button */}
+              <button
+                onClick={() => setLocateTrigger(prev => prev + 1)}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              >
+                ⌖
+              </button>
+              {/* Zoom In Button */}
+              <button
+                onClick={() => { setZoomTrigger("in"); setTimeout(() => setZoomTrigger(null), 50); }}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              >
+                +
+              </button>
+              {/* Zoom Out Button */}
+              <button
+                onClick={() => { setZoomTrigger("out"); setTimeout(() => setZoomTrigger(null), 50); }}
+                className="w-8 h-8 flex items-center justify-center bg-[#F5F2EA] border-[#D4CCBA] rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              >
+                -
+              </button>
+            </div>
         </div>
 
         {/* SPOT LIST — 1/4 */}
-        <div className="flex-1 flex flex-col border-l border-[#D4CCBA] bg-[#F5F2EA] hover:bg-[#EBE6D8]overflow-hidden min-w-55">
-          <div className="px-4 py-3 border-b border-[#2A241E] shrink-0">
-            <span className="text-sm font-semibold text-[#2A241E]">Study Spots</span>
-            <span className="text-xs text-[#6B6355] ml-2">{filteredSpots.length} found</span>
+        <div className="flex-1 flex flex-col border-2 border-[#0F2D1C] bg-[#F5F2EA] hover:bg-[#EBE6D8]overflow-hidden min-w-55">
+          <div className="px-4 py-3 border-b-2 border-[#0F2D1C] shrink-0">
+            <span className="text-sm font-semibold text-[#0F2D1C]">Study Spots</span>
+            <span className="text-xs text-[#0F2D1C] ml-2">{filteredSpots.length} found</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
             {filteredSpots.length === 0 ? (
-              <div className="text-center text-xs text-[#6B6355] mt-8">
+              <div className="text-center text-xs text-[#0F2D1C] mt-8">
                 No spots match your filters.
               </div>
             ) : (
@@ -122,19 +179,20 @@ export default function StudySpot() {
                   key={spot.id}
                   onClick={() => setActiveSpotId(spot.id)}
                   className={`p-3 rounded-lg border cursor-pointer transition-all grid grid-cols-[1fr_auto] items-center gap-2 ${activeSpotId === spot.id
-                    ? 'border-[#0F2D1C] bg-[#EBE6D8]'
-                    : 'border-[#D4CCBA] bg-[#F5F2EA] hover:bg-[#EBE6D8]'
+                    ? 'border-[#0F2D1C]  bg-[#C4811A] border-2 text-[#F5F2EA]'
+                    : 'border-[#0F2D1C] bg-[#F5F2EA] hover:bg-[#C4811A] hover:border-[#0F2D1C] hover:border-2'
                     }`}
                 >
                   <div>
-                    <div className="text-xs font-semibold text-[#2A241E] mb-0.5">{spot.name}</div>
-                    <div className="text-[10px] text-[#6B6355] mb-2">★ {spot.rating} · {spot.dist}</div>
+                    <div className="text-xs font-semibold text-[#0F2D1C] mb-0.5">{spot.name}</div>
+                    <div className="text-[10px] text-[#0F2D1C] mb-2">★ {spot.rating} · {spot.dist}</div>
                     <div className="flex flex-wrap gap-1">
-                      {Object.entries(spot.tags).map(([cat, val]) => (
-                        <span key={cat} className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#6B6355] border border-[#D4CCBA]">
-                          {getFilterLabel(cat, val)}
-                        </span>
-                      ))}
+                      <div className="flex flex-wrap gap-1">
+                        {spot.has_wifi && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">WIFI</span>}
+                        {spot.noise_level && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">{getFilterLabel('noise', spot.noise_level)}</span>}
+                        {spot.environment && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">{getFilterLabel('environment', spot.environment)}</span>}
+                        {spot.location_type && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">{getFilterLabel('location', spot.location_type)}</span>}
+                      </div>
                     </div>
                   </div>
 
