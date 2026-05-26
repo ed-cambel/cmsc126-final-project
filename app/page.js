@@ -8,15 +8,12 @@ import Filterbar from '@/components/Filterbar';
 import { ChevronRightIcon } from '@heroicons/react/16/solid';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useSearch } from '@/context/SearchContext';
-import dynamic from "next/dynamic";
 
 const supabase = createClient();
 
-const MapComponent = dynamic(() => import("../components/map"), {
-  loading: () => <p>Loading map...</p>,
-  ssr: false,
-})
+import dynamic from "next/dynamic";
+
+
 
 // constants for filter options
 const FILTER_DEFS = [
@@ -35,6 +32,11 @@ const FILTER_DEFS = [
   { category: "location", value: "inside_upv", label: "INSIDE UPV" },
   { category: "location", value: "outside_upv", label: "OUTSIDE UPV" },
 ];
+
+const MapComponent = dynamic(() => import("../components/map"), {
+  loading: () => <p>Loading map...</p>,
+  ssr: false, 
+});
 
 function getFilterLabel(category, value) {
   const def = FILTER_DEFS.find(d => d.category === category && d.value === value);
@@ -58,7 +60,6 @@ export default function StudySpot() {
   const [activeSpotId, setActiveSpotId] = useState(null);
   const [zoomTrigger, setZoomTrigger] = useState(null);
   const [locateTrigger, setLocateTrigger] = useState(0);
-  const { searchLocation } = useSearch();
 
   useEffect(() => {
     const fetchSpots = async () => {
@@ -86,12 +87,15 @@ export default function StudySpot() {
       {/* MAIN BODY */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* MAP  */}
+        {/* MAP — 3/4 */}
         <div className="flex-3 relative bg-green-100">
+          
+            <div className="absolute inset-0 w-full h-full z-0">
+                <MapComponent zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} />
+              </div>
 
               {/* Active Map Controls */}
-              <div className="absolute top-4 right-4 flex flex-col gap-1 z-[1000]">
-
+            <div className="absolute bottom-4 left-4 flex flex-col gap-1 z-[1000]">
               {/* Current Location Target Button */}
               <button
                 onClick={() => setLocateTrigger(prev => prev + 1)}
