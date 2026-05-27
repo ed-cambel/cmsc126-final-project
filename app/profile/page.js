@@ -32,7 +32,7 @@ function SpotRow({ spot, actionLabel, onAction }) {
     return (
         <div className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
             <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-xs flex-shrink-0 border border-gray-200 overflow-hidden">
-                {/* Future: fetch from your photos table */}
+                {/* fetch from your photos table */}
                 IMAGE
             </div>
             <div className="flex-1 flex flex-col gap-1">
@@ -298,7 +298,10 @@ export default function ProfilePage() {
 
                     {/* Edit and Logout buttons */}
                     <div className="grid grid-cols-2 gap-2">
-                        <button className="py-2 text-xs font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+                        <button 
+                            onClick={() => router.push('/profile/edit')}
+                            className="py-2 text-xs font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition text-center block w-full"
+                        >
                             EDIT
                         </button>
                         <button 
