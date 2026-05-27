@@ -4,28 +4,59 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Filterbar from '@/components/Filterbar';
 import { createClient } from '@/lib/supabase/client';
 
 const supabase = createClient();
 
+const FILTER_DEFS = [
+  { category: "connectivity", value: "wifi", label: "WIFI" },
+  { category: "connectivity", value: "no_wifi", label: "NO WIFI" },
+  { category: "connectivity", value: "outlet", label: "OUTLET" },
+  { category: "connectivity", value: "no_outlet", label: "NO OUTLET" },
+  { category: "noise", value: "silent", label: "SILENT" },
+  { category: "noise", value: "quiet", label: "QUIET" },
+  { category: "noise", value: "moderate", label: "MODERATE" },
+  { category: "noise", value: "noisy", label: "NOISY" },
+  { category: "environment", value: "air_conditioned", label: "AIR CONDITIONED" },
+  { category: "environment", value: "non_air_conditioned", label: "NON-AIR CONDITIONED" },
+  { category: "environment", value: "indoor", label: "INDOOR" },
+  { category: "environment", value: "outdoor", label: "OUTDOOR" },
+  { category: "location", value: "inside_upv", label: "INSIDE UPV" },
+  { category: "location", value: "outside_upv", label: "OUTSIDE UPV" },
+];
+
+// 🛠️ FIXED: Normalized string lookups to catch case variations from Database Views
+function getFilterLabel(category, value) {
+  if (!value) return '';
+  const normalizedValue = String(value).toLowerCase().trim();
+
+  const def = FILTER_DEFS.find(d => d.category === category && d.value === normalizedValue);
+  return def ? def.label : normalizedValue.replace(/_/g, ' ').toUpperCase();
+}
+
 // makes a star rating string based on a numeric rating
 function StarRating({ rating }) {
+  const numericRating = Number(rating) || 0;
   return (
     <span className="text-xs text-[#C4811A]">
-      {'★'.repeat(Math.floor(rating))}{'☆'.repeat(5 - Math.floor(rating))}
-      <span className='text-[#6B6355]'>{rating}</span>
+      {'★'.repeat(Math.floor(numericRating))}
+      {'☆'.repeat(5 - Math.floor(numericRating))}
+      <span className='text-[#6B6355] ml-1'>{numericRating.toFixed(1)}</span>
     </span>
   );
 }
 
 // descriptor tags
-function TagPill({ label }) {
+function TagPill({ label, dark }) {
   return (
-    <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#EDF5D8] text-[#6B6355] border border-[#D4CCBA]">
-      {label.replace(/_/g, ' ').toUpperCase()}
+    <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold tracking-wide whitespace-nowrap uppercase border ${dark
+        ? 'bg-[#0F2D1C] text-[#F5F2EA] border-[#1E4A2A]'
+        : 'bg-[#F5F2EA] text-[#0F2D1C] border-[#0F2D1C]'
+      }`}>
+      {label}
     </span>
   );
 }
@@ -33,8 +64,11 @@ function TagPill({ label }) {
 // section header for each category
 function SectionHeader({ title }) {
   return (
-    <div className="flex flex-col gap-1 mb-3">
-      <h2 className="text-sm font-black text-[#0F2D1C] tracking-widest uppercase">{title}</h2>
+    <div className="flex flex-col gap-1 mb-4">
+      <h2 className="text-base font-black text-[#0F2D1C] tracking-widest uppercase flex items-center gap-2">
+        <span className="w-1 h-4 bg-[#C4811A] rounded-full inline-block"></span>
+        {title}
+      </h2>
       <div className="h-px bg-[#D4CCBA] w-full" />
     </div>
   );
@@ -42,37 +76,43 @@ function SectionHeader({ title }) {
 
 // card component for each spot in each category
 function SpotCard({ spot, active }) {
+  // 🛠️ FIXED: Ensuring true boolean flags map seamlessly alongside data strings
   const tags = [
-    spot.has_wifi ? 'wifi' : 'no_wifi',
-    spot.noise_level, 
-    spot.environment,
-    spot.location_type
-  ].filter(Boolean); // filter out any undefined tags
+    (spot.has_wifi === true || String(spot.has_wifi) === 'true') ? getFilterLabel('connectivity', 'wifi') : null,
+    (spot.has_outlets === true || String(spot.has_outlets) === 'true') ? getFilterLabel('connectivity', 'outlet') : null,
+    spot.noise_level ? getFilterLabel('noise', spot.noise_level) : null,
+    spot.environment ? getFilterLabel('environment', spot.environment) : null,
+    spot.location_type ? getFilterLabel('location', spot.location_type) : null
+  ].filter(Boolean);
+
+  const displayImage = spot.photos?.[0]?.storage_url;
+  const [hovered, setHovered] = useState(false);
 
   return (
     <Link
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       href={`/spot/${spot.id}`}
-      className={`shrink-0 w-56 rounded-2xl border p-3 flex flex-col gap-2 hover:shadow-[#EBE6D8] transition bg-[#F5F2EA] ${active ? 'border-[#0F2D1C] border-2' : 'border-[#D4CCBA]'}`}
+      className="shrink-0 w-56 h-64 rounded-2xl border border-[#D4CCBA] p-3 flex flex-col gap-2 transition bg-[#F5F2EA] hover:bg-[#1E4A2A] hover:border-[#0F2D1C] hover:shadow-lg"
     >
-      {/* Placeholder for spot photo -- TODO: fetch images from Supabase */}
-      <div className="w-full h-32 rounded-xl bg-[#EBE6D8] flex items-center justify-center text-[#6B6355] text-xs overflow-hidden">
-        {spot.images?.[0]
-          ? <img src={spot.images[0]} alt={spot.name} className="w-full h-full object-cover" />
-          : '[ no photo ]'}
+      {/* photo */}
+      <div className="w-full h-32 rounded-xl bg-[#EBE6D8] flex items-center justify-center text-[#6B6355] text-xs overflow-hidden shrink-0">
+        {displayImage
+          ? <img src={displayImage} alt={spot.name} className="w-full h-full object-cover" />
+          : <span className="italic">[ no photo ]</span>}
       </div>
 
-      {/* Spot name */}
-      <div className="text-sm font-bold text-[#2A241E]">{spot.name}</div>
+      <div className={`text-sm font-bold truncate ${hovered ? 'text-[#F5F2EA]' : 'text-[#2A241E]'}`}>{spot.name}</div>
 
-      {/* Rating and distance */}
       <div className="flex items-center gap-1">
-        <StarRating rating={spot.computed_rating} />
-        <span className="text-[10px] text-[#6B6355]">({spot.computed_review_count ?? 0} reviews)</span>
+        <StarRating rating={spot.computed_rating ?? spot.rating} />
+        <span className={`text-[10px] ${hovered ? 'text-[#D4CCBA]' : 'text-[#6B6355]'}`}>
+          ({spot.computed_review_count ?? spot.review_count ?? 0} reviews)
+        </span>
       </div>
 
-      {/* Tag pills — show first 3 tags only */}
-      <div className="flex flex-wrap gap-1">
-        {tags.slice(0, 3).map((val, i) => <TagPill key={i} label={val} />)}
+      <div className="flex flex-wrap gap-1 mt-auto">
+        {tags.slice(0, 3).map((val, i) => <TagPill key={i} label={val} dark={hovered} />)}
       </div>
     </Link>
   );
@@ -93,30 +133,34 @@ function HorizontalSection({ title, spots }) {
 }
 
 export default function DiscoverPage() {
-  const [spots, setSpots] = useState([]); 
-  const [featured, setFeatured] = useState(null); // can be used to set the featured spot of the week from Supabase
+  const [spots, setSpots] = useState([]);
+  const [featured, setFeatured] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
-      // fetch all spots with stats
       const { data, error } = await supabase
         .from('spots_with_stats')
-        .select('*');
+        .select(`
+          *,
+          photos (
+            storage_url
+          )
+        `);
 
       if (error) {
         console.error('Error fetching spots:', error);
+        setLoading(false);
         return;
       }
 
-      setSpots(data);
+      setSpots(data || []);
 
-      // featured: highest rated from last 7 days, fallback to all-time top
       const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       let { data: featuredData } = await supabase
         .from('spots_with_stats')
-        .select('*')
+        .select(`*, photos (storage_url)`)
         .gte('created_at', lastWeek)
         .order('computed_rating', { ascending: false })
         .limit(1);
@@ -124,7 +168,7 @@ export default function DiscoverPage() {
       if (!featuredData || featuredData.length === 0) {
         const { data: fallback } = await supabase
           .from('spots_with_stats')
-          .select('*')
+          .select(`*, photos (storage_url)`)
           .order('computed_rating', { ascending: false })
           .limit(1);
         featuredData = fallback;
@@ -137,23 +181,37 @@ export default function DiscoverPage() {
     fetchData();
   }, []);
 
-  const topRated = [...spots].sort((a, b) => (b.computed_rating ?? 0) - (a.computed_rating ?? 0)).slice(0, 5);
-  const recentlyAdded = [...spots].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
-  const bestForStudying = spots.filter(s => s.noise_level === 'silent' && s.has_wifi);
-  const hiddenGems = spots.filter(s => (s.computed_rating ?? 0) >= 4.0 && (s.computed_review_count ?? 0) <= 8);
-  const outdoor = spots.filter(s => s.environment === 'outdoor');
+  const filteredSpots = useMemo(() => {
+    return spots.filter(spot => {
+      // 🛠️ FIXED: Normalizing filter matching to handle subtle data variations
+      if (selectedFilters.noise && String(spot.noise_level).toLowerCase() !== String(selectedFilters.noise).toLowerCase()) return false;
+      if (selectedFilters.environment && String(spot.environment).toLowerCase() !== String(selectedFilters.environment).toLowerCase()) return false;
+      if (selectedFilters.location && String(spot.location_type).toLowerCase() !== String(selectedFilters.location).toLowerCase()) return false;
+      if (selectedFilters.wifi && !spot.has_wifi) return false;
+      if (selectedFilters.outlets && !spot.has_outlets) return false;
+      return true;
+    });
+  }, [spots, selectedFilters]);
+
+  // Decoupled row arrays using useMemo
+  const topRated = useMemo(() => [...filteredSpots].sort((a, b) => (b.computed_rating ?? 0) - (a.computed_rating ?? 0)).slice(0, 5), [filteredSpots]);
+  const recentlyAdded = useMemo(() => [...filteredSpots].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5), [filteredSpots]);
+  const bestForStudying = useMemo(() => filteredSpots.filter(s => String(s.noise_level).toLowerCase() === 'silent' && s.has_wifi), [filteredSpots]);
+  const hiddenGems = useMemo(() => filteredSpots.filter(s => (s.computed_rating ?? s.rating ?? 0) >= 4.0 && (s.computed_review_count ?? s.review_count ?? 0) <= 8), [filteredSpots]);
+  const outdoor = useMemo(() => filteredSpots.filter(s => String(s.environment).toLowerCase() === 'outdoor'), [filteredSpots]);
+
+  const featuredImage = featured?.photos?.[0]?.storage_url;
+
   return (
     <div className="min-h-screen bg-[#F5F2EA] overflow-y-auto pb-32">
-      <div >
-
-        {/* import Filterbar component */}
+      <div>
         <Filterbar
           selectedFilters={selectedFilters}
           onChange={setSelectedFilters}
-          resultCount={spots.length}
+          resultCount={filteredSpots.length}
         />
 
-        {/* Featured This Week  */}
+        {/* Featured This Week */}
         <div className="px-6 py-5 flex flex-col gap-8">
           <div className="flex flex-col">
             <SectionHeader title="Featured This Week" />
@@ -161,21 +219,34 @@ export default function DiscoverPage() {
               <div className="h-70 bg-[#EBE6D8] rounded-2xl animate-pulse" />
             ) : featured ? (
               <Link href={`/spot/${featured.id}`} className="flex h-70 bg-[#F5F2EA] border border-[#D4CCBA] rounded-2xl overflow-hidden hover:bg-[#EBE6D8] transition">
-                <div className="w-[45%] h-70 bg-[#EBE6D8] flex items-center justify-center text-[#6B6355] text-xs shrink-0 overflow-hidden">
-                  {featured.images?.[0]
-                    ? <img src={featured.images[0]} alt={featured.name} className="w-full h-full object-cover" />
-                    : '[ no photo ]'}
+                <div className="w-[45%] h-70 bg-[#EBE6D8] flex items-center justify-center text-[#6B6355] text-xs shrink-0 overflow-hidden relative">
+                  {featuredImage ? (
+                    <img src={featuredImage} alt={featured.name} className="w-full h-full object-cover" />
+                  ) : (
+                    '[ no photo ]'
+                  )}
                 </div>
                 <div className="flex flex-col justify-between p-5 flex-1">
                   <div className="flex flex-col gap-2">
                     <div className="text-base font-bold text-[#0F2D1C]">{featured.name}</div>
                     <div className="flex items-center gap-1">
-                      <StarRating rating={featured.computed_rating} />
-                      <span className="text-[10px] text-[#6B6355]">({featured.computed_review_count ?? 0} reviews)</span>
+                      <StarRating rating={featured.computed_rating ?? featured.rating} />
+                      <span className="text-[10px] text-[#6B6355]">({featured.computed_review_count ?? featured.review_count ?? 0} reviews)</span>
                     </div>
                     <p className="text-xs text-[#6B6355] line-clamp-3">{featured.description}</p>
+
+                      <div className="flex flex-wrap gap-1">
+                        {[
+                          featured.has_wifi ? getFilterLabel('connectivity', 'wifi') : null,
+                          featured.noise_level ? getFilterLabel('noise', featured.noise_level) : null,
+                          featured.environment ? getFilterLabel('environment', featured.environment) : null,
+                          featured.location_type ? getFilterLabel('location', featured.location_type) : null,
+                        ].filter(Boolean).slice(0, 3).map((tag, i) => (
+                          <TagPill key={i} label={tag} />
+                        ))}
+                      </div>
                   </div>
-                  <button className="w-full py-2 text-xs font-bold rounded-lg bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition tracking-widest">
+                  <button type="button" className="w-full py-2 text-xs font-bold rounded-lg bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition tracking-widest uppercase">
                     VIEW SPOT
                   </button>
                 </div>
@@ -196,8 +267,8 @@ export default function DiscoverPage() {
               <HorizontalSection title="Outdoor Spots" spots={outdoor} />
             </>
           )}
+        </div>
       </div>
-    </div>
     </div>
   );
 }

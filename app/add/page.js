@@ -48,8 +48,14 @@ export default function AddPage() {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    const urls = files.map(f => URL.createObjectURL(f));
-    setImages(prev => [...prev, ...urls].slice(0, 5));
+    
+    const newImages = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+
+    
+    setImages(prev => [...prev, ...newImages].slice(0, 5));
   };
 
   const handleMapLocationSelect = ({ lat, lng, address }) => {
@@ -63,21 +69,23 @@ export default function AddPage() {
 
   const handleSubmit = async () => {
     const newErrors = {};
-    if (!form.name || !form.address) {
-      newErrors.name = !form.name ? 'Name is required.' : '';
-      newErrors.address = !form.address ? 'Address is required.' : '';
-      setErrors(newErrors);
-      return;
+    if (!form.name) newErrors.name = 'Spot name is required';
+
+    if (!form.address && (form.lat === null || form.lng === null)) {
+      newErrors.address = 'Either an address or a pinned location on the map is required';
     }
 
     if (form.lat === null || form.lng === null) {
-      alert('Please search for an address or drop a marker pin on the map viewport before submitting.');
-      return;
+      newErrors.address = 'Please pin the location on the map';
     }
 
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
     const { data: { user } } = await supabase.auth.getUser();
 
-    const { error } = await supabase.from('spots').insert({
+    const { data: spotData, error } = await supabase.from('spots').insert({
       name: form.name,
       address: form.address,
       description: form.description,
@@ -91,11 +99,42 @@ export default function AddPage() {
       lng: form.lng,
       is_24hr: form.is_24hr,
       opening_hours: form.is_24hr ? null : form.opening_hours
-    });
+    })
+    .select()
+    .single();
 
     if (error) {
       alert('Error submitting spot: ' + error.message);
       return;
+    }
+
+    if (images.length > 0) {
+      for (const img of images) {
+        const file = img.file;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('spot-photos')
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error(uploadError);
+          continue;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('spot-photos')
+          .getPublicUrl(fileName);
+
+        const publicUrl = publicUrlData.publicUrl;
+
+        await supabase.from('photos').insert({
+          spot_id: spotData.id,
+          uploaded_by: user.id,
+          storage_url: publicUrl
+        });
+      }
     }
 
     alert('Submitted!');
@@ -281,9 +320,9 @@ export default function AddPage() {
                 +
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
               </label>
-              {images.map((src, i) => (
-                <div key={i} className="relative w-20 h-20">
-                  <Image src={src} alt="" fill className="object-cover rounded-lg border border-[#1E4A2A]" />
+              {images.map((img, i) => (
+                <div key={i} className="relative w-30 h-30">
+                  <Image src={img.preview} alt="" fill className="object-cover rounded-lg border border-[#1E4A2A]" />
                   <button
                     type="button"
                     onClick={() => setImages(prev => prev.filter((_, idx) => idx !== i))}
