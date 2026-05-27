@@ -53,6 +53,7 @@ export default function LoginPage() {
 
   function continueAsGuest() {
     router.push('/');
+    router.refresh();
   }
 
   return (
