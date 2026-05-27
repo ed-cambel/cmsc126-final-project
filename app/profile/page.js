@@ -220,7 +220,7 @@ export default function ProfilePage() {
     // ── Handlers for Custom Modal ──
     const handleRemoveClick = (spotId) => {
         setSelectedSpotId(spotId);
-        setShowModal(true); // Open the modal
+        setShowModal(true); 
     };
 
     const confirmRemoveSavedSpot = async () => {
@@ -235,11 +235,9 @@ export default function ProfilePage() {
         if (error) {
             console.error('Error removing saved spot:', error.message);
         } else {
-            // Success: optimistically update UI
             setSavedSpots((prevSpots) => prevSpots.filter(spot => spot.id !== selectedSpotId));
         }
 
-        // Close modal and reset state
         setShowModal(false);
         setSelectedSpotId(null);
     };
@@ -258,7 +256,7 @@ export default function ProfilePage() {
                                 key={spot.id} 
                                 spot={spot} 
                                 actionLabel="REMOVE" 
-                                onAction={handleRemoveClick} // Use new handler here
+                                onAction={handleRemoveClick} 
                             />
                         ))
                     )}
@@ -375,7 +373,10 @@ export default function ProfilePage() {
 
                         {/* Edit and Logout buttons */}
                         <div className="grid grid-cols-2 gap-2">
-                            <button className="py-2 text-xs font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+                            <button 
+                                onClick={() => router.push('/profile/edit')}
+                                className="py-2 text-xs font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition text-center block w-full"
+                            >
                                 EDIT
                             </button>
                             <button 
