@@ -39,8 +39,11 @@ export default function LoginPage() {
     router.push('/');
   }
 
-  function continueAsGuest() {
+  async function continueAsGuest() {
+    setLoading(true);
+    await supabase.auth.signOut();
     router.push('/');
+    router.refresh();
   }
 
   return (
