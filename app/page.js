@@ -9,6 +9,8 @@ import { ChevronRightIcon } from '@heroicons/react/16/solid';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useSearch } from '@/context/SearchContext';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { getDistance } from '@/lib/distance';
 
 const supabase = createClient();
 
@@ -62,11 +64,12 @@ export default function StudySpot() {
   const [activeSpotId, setActiveSpotId] = useState(null);
   const [zoomTrigger, setZoomTrigger] = useState(null);
   const [locateTrigger, setLocateTrigger] = useState(0);
+  const userLocation = useGeolocation();
   
 
   useEffect(() => {
     const fetchSpots = async () => {
-      const { data, error } = await supabase.from('spots').select('*');
+      const { data, error } = await supabase.from('spots_with_stats').select('*');
       if (error) {
         console.error('Error fetching spots:', error);
       } else {
@@ -147,7 +150,11 @@ export default function StudySpot() {
                 >
                   <div>
                     <div className="text-xs font-semibold text-[#0F2D1C] mb-0.5">{spot.name}</div>
-                    <div className="text-[10px] text-[#0F2D1C] mb-2">★ {spot.rating} · {spot.dist}</div>
+                    <div className="text-[10px] text-[#0F2D1C] mb-2">★ {spot.computed_rating ?? '—'} · ({spot.computed_review_count ?? 0} reviews)
+                    {userLocation && spot.lat && spot.lng && (
+                      <span className="ml-2">· {getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng)}</span>
+                    )}
+                    </div>
                     <div className="flex flex-wrap gap-1">
                       <div className="flex flex-wrap gap-1">
                         {spot.has_wifi && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">WIFI</span>}

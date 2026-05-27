@@ -33,7 +33,7 @@ export async function middleware(request) {
     const pathname = request.nextUrl.pathname;
 
     // public routes that don't require authentication
-    const publicRoutes = ['/', '/discover', '/login', '/signup', '/auth'];
+    const publicRoutes = ['/', '/discover', '/login', '/signup', '/auth/callback'];
 
     const isPublicRoute = publicRoutes.some(route => {
         if (route === '/') return pathname === '/';
@@ -43,7 +43,7 @@ export async function middleware(request) {
     // if route not public, redirect to login with redirect param
     if (!isPublicRoute && !user) {
         const loginUrl = new URL('/login', request.url);
-        loginUrl.searchParams.set('redirect', pathname); // Keeps track of where they wanted to go and redirects them there after login
+        loginUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(loginUrl);
     }
 
