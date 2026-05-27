@@ -1,199 +1,368 @@
 // study spot page - contains info about a specific study spot: name, location, hours, reviews, etc.
 // redirects from discover page, can redirect to review page
 // can be viewed by guest or user
-
 'use client';
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { UserCircleIcon } from '@heroicons/react/24/outline';
+import { useParams, useRouter } from 'next/navigation';
+import { UserCircleIcon, ChevronLeftIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { createClient } from '@/lib/supabase/client';
 
-// ── Dummy spot data, replace with Supabase fetch using params.id later ──
-const SPOT = {
-  id: 1,
-  name: 'Beans and Bubbles',
-  rating: 4.5,
-  reviews: 12,
-  dist: '0.6 km',
-  description: 'A cozy café perfect for studying or working remotely. Offers reliable WiFi, plenty of outlets, and a calm atmosphere. Known for their milk teas and sandwiches.',
-  tags: ['WiFi', 'Moderate', 'Air Conditioned', 'Outside UPV', 'Indoor', 'Outlet'],
-  images: [],
-};
+const supabase = createClient();
 
-// ── Dummy reviews, replace with Supabase fetch later ──
-const REVIEWS = [
-  { id: 1, username: 'Username', rating: 4, body: 'Great place to study. The WiFi is fast and the drinks are good. Can get a bit noisy during lunch hours but overall a solid spot.' },
-  { id: 2, username: 'Username', rating: 4.5, body: 'Love the vibe here. Aircon is strong and the staff are friendly. Would recommend for long study sessions.' },
-  { id: 3, username: 'Username', rating: 3.5, body: 'Decent spot but limited seating. Go early to get a good table. The Spanish latte is worth trying.' },
+const STORAGE_BASE_URL = "https://YOUR_PROJECT_ID.supabase.co/storage/v1/object/public/photos/";
+
+const FILTER_DEFS = [
+  { category: "noise", value: "silent", label: "SILENT" },
+  { category: "noise", value: "quiet", label: "QUIET" },
+  { category: "noise", value: "moderate", label: "MODERATE" },
+  { category: "noise", value: "noisy", label: "NOISY" },
+  { category: "environment", value: "air_conditioned", label: "AIR CONDITIONED" },
+  { category: "environment", value: "non_air_conditioned", label: "NON-AIR CONDITIONED" },
+  { category: "environment", value: "indoor", label: "INDOOR" },
+  { category: "environment", value: "outdoor", label: "OUTDOOR" },
+  { category: "location", value: "inside_upv", label: "INSIDE UPV" },
+  { category: "location", value: "outside_upv", label: "OUTSIDE UPV" },
 ];
 
-// ── Renders star rating ──
+function getFilterLabel(category, value) {
+  if (!value) return '';
+  const normalizedValue = String(value).toLowerCase().trim();
+  const def = FILTER_DEFS.find(d => d.category === category && d.value === normalizedValue);
+  return def ? def.label : normalizedValue.replace(/_/g, ' ').toUpperCase();
+}
+
 function StarRating({ rating, interactive = false, onRate }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map(star => (
         <button
           key={star}
           type="button"
           onClick={() => interactive && onRate && onRate(star)}
-          className={`text-base ${interactive ? 'cursor-pointer hover:scale-110 transition' : 'cursor-default'} ${star <= Math.floor(rating) ? 'text-gray-700' : 'text-gray-300'}`}
-        >
-          ★
-        </button>
+          className={`text-lg ${interactive ? 'cursor-pointer hover:scale-125 transition-transform' : 'cursor-default'} ${star <= Math.floor(rating) ? 'text-[#CFA000]' : 'text-[#2E6B3E]'}`}
+        >★</button>
       ))}
     </div>
   );
 }
 
-// ── Tag pill badge ──
 function TagPill({ label }) {
   return (
-    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+    <span className="text-[10px] px-3 py-1 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C] font-bold uppercase tracking-wider">
       {label}
     </span>
   );
 }
 
 export default function SpotPage() {
-  // ── Review form state ──
+  const { id } = useParams();
+  const router = useRouter();
+
+  const [spot, setSpot] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
-  const [reviewImages, setReviewImages] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
-  // ── Handle review image upload, max 3 images ──
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const urls = files.map(f => URL.createObjectURL(f));
-    setReviewImages(prev => [...prev, ...urls].slice(0, 3));
-  };
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        setLoading(true);
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        setUser(currentUser);
 
-  // ── Handle review submission, replace with Supabase insert later ──
-  const handleSubmitReview = () => {
+        const { data: spotData, error: spotError } = await supabase
+          .from('spots')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (spotError || !spotData) {
+          setLoading(false);
+          return;
+        }
+
+        const { data: photosData } = await supabase
+          .from('photos')
+          .select('storage_url')
+          .eq('spot_id', id);
+
+        const { data: statsData } = await supabase
+          .from('spots_with_stats')
+          .select('computed_rating, computed_review_count')
+          .eq('id', id)
+          .maybeSingle();
+
+        setSpot({
+          ...spotData,
+          computed_rating: statsData?.computed_rating ?? spotData.rating ?? 0,
+          computed_review_count: statsData?.computed_review_count ?? spotData.review_count ?? 0,
+          photos: photosData || []
+        })
+
+        const { data: reviewData, error: reviewError } = await supabase
+          .from('reviews')
+          .select(`*, profiles(username, avatar_url)`)
+          .eq('spot_id', id)
+          .order('created_at', { ascending: false });
+
+        console.log('reviews:', reviewData);
+        console.log('review error:', reviewError);
+
+        setReviews(reviewData || []);
+      } catch (err) {
+        console.error('Fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchAll();
+  }, [id]);
+
+  const handleSubmitReview = async () => {
+    if (!user) { router.push('/login'); return; }
     if (!reviewRating) return alert('Please select a rating.');
     if (!reviewText.trim()) return alert('Please write a review.');
-    console.log({ rating: reviewRating, body: reviewText, images: reviewImages });
-    alert('Review submitted!');
+
+    setSubmitting(true);
+    const { error } = await supabase.from('reviews').insert({
+      spot_id: id,
+      user_id: user.id,
+      stars: reviewRating,
+      body: reviewText,
+    });
+
+    if (error) {
+      alert('Error: ' + error.message);
+      setSubmitting(false);
+      return;
+    }
+
+    // refresh reviews
+    const { data: reviewData } = await supabase
+      .from('reviews')
+      .select(`*, profiles(username, avatar_url)`)
+      .eq('spot_id', id)
+      .order('created_at', { ascending: false });
+
+    setReviews(reviewData || []);
+
+    // refresh stats
+    const { data: statsData } = await supabase
+      .from('spots_with_stats')
+      .select('computed_rating, computed_review_count')
+      .eq('id', id)
+      .maybeSingle();
+
+    setSpot(prev => ({
+      ...prev,
+      computed_rating: statsData?.computed_rating ?? prev.computed_rating,
+      computed_review_count: statsData?.computed_review_count ?? prev.computed_review_count,
+    }));
+
+    setReviews(reviewData || []);
     setReviewRating(0);
     setReviewText('');
-    setReviewImages([]);
+    setSubmitting(false);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
+  const tags = spot ? [
+    spot.has_wifi ? 'WiFi' : 'No WiFi',
+    spot.has_outlets ? 'Outlet' : null,
+    spot.noise_level ? getFilterLabel('noise', spot.noise_level) : null,
+    spot.environment ? getFilterLabel('environment', spot.environment) : null,
+    spot.location_type ? getFilterLabel('location', spot.location_type) : null,
+  ].filter(Boolean) : [];
 
-      {/* Page header */}
-      <div className="relative w-full flex items-center px-4 py-2.5 bg-white border-b border-gray-200">
-        <Link href="/" className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700">
-          ← Back
+  const resolveUrl = (path) => {
+    if (!path) return null;
+    return path.startsWith('http') ? path : `${STORAGE_BASE_URL}${path}`;
+  };
+
+  const primaryPhoto = resolveUrl(spot?.photos?.[0]?.storage_url);
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#F5F2EA] flex items-center justify-center text-sm text-[#0F2D1C]">
+      Loading...
+    </div>
+  );
+
+  if (!spot) return (
+    <div className="min-h-screen bg-[#F5F2EA] flex items-center justify-center text-sm text-[#B33A1A]">
+      Spot not found.
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#F5F2EA]">
+
+      {/* Header */}
+      <div className="relative w-full flex items-center px-6 py-3 border-[#0F2D1C] bg-[#F5F2EA] border-b-2 shrink-0 z-10">
+        <Link href="/" className='flex items-center gap-1 text-base font-medium text-[#0F2D1C] hover:text-[#C4811A] transition'>
+          <ChevronLeftIcon className='w-6 h-6' /> Back
         </Link>
+        <h1 className="text-xl font-bold text-[#0F2D1C] absolute left-1/2 -translate-x-1/2 tracking-wide uppercase">
+          {spot.name}
+        </h1>
       </div>
 
-      <div className="flex gap-0 min-h-[calc(100vh-45px)]">
+      <div className="flex h-[calc(100vh-49px)]">
 
-        {/* ── LEFT CONTENT ── */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-5">
+        {/* LEFT */}
+        <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-6">
 
-          {/* Hero image */}
-          <div className="w-full h-56 rounded-xl bg-gray-200 flex items-center justify-center text-gray-300 text-sm overflow-hidden">
-            {SPOT.images.length > 0
-              ? <img src={SPOT.images[0]} className="w-full h-full object-cover" />
-              : '[ photo ]'
-            }
+          {/* Hero */}
+          <div className="shrink-0 w-full h-75 rounded-2xl bg-[#EBE6D8] flex items-center justify-center text-[#D4CCBA] text-sm overflow-hidden shadow-sm">
+            {primaryPhoto
+              ? <img src={primaryPhoto} alt={spot.name} className="w-full h-full object-cover" />
+              : <span className="italic">[ no photo available ]</span>}
           </div>
 
-          {/* Spot name */}
-          <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-black text-red-700 tracking-wide uppercase">{SPOT.name}</h1>
-
-            {/* Rating and distance */}
-            <div className="flex items-center gap-2">
-              <StarRating rating={SPOT.rating} />
-              <span className="text-xs text-gray-500">{SPOT.rating} ({SPOT.reviews} Reviews) · {SPOT.dist}</span>
-            </div>
-
-            {/* Tags */}
-            <div className="flex flex-wrap gap-1.5">
-              {SPOT.tags.map((tag, i) => <TagPill key={i} label={tag} />)}
-            </div>
-
-            {/* Description */}
-            <p className="text-sm text-gray-500 leading-relaxed mt-1">{SPOT.description}</p>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-dashed border-gray-300" />
-
-          {/* Reviews section */}
+          {/* Spot info */}
           <div className="flex flex-col gap-3">
-            <h2 className="text-sm font-bold text-gray-700">Reviews ({REVIEWS.length})</h2>
-            <div className="border-t border-dashed border-gray-300" />
+            <h1 className="text-3xl font-black text-[#0F2D1C] tracking-wide uppercase">{spot.name}</h1>
 
-            {REVIEWS.map(review => (
-              <div key={review.id} className="flex flex-col gap-1.5 py-3 border-b border-gray-100 last:border-0">
-                {/* Reviewer info */}
-                <div className="flex items-center gap-2">
-                  <UserCircleIcon className="w-6 h-6 text-gray-400" />
-                  <span className="text-xs font-semibold text-gray-700">{review.username}</span>
-                  <StarRating rating={review.rating} />
-                </div>
+            <div className="flex items-center gap-3">
+              <StarRating rating={spot.computed_rating ?? 0} />
+              <span className="text-sm text-[#6B6355] font-semibold">
+                {spot.computed_rating ? Number(spot.computed_rating).toFixed(1) : '—'}
+              </span>
+              <span className="text-xs text-[#D4CCBA]">·</span>
+              <span className="text-xs text-[#6B6355]">{spot.computed_review_count ?? 0} reviews</span>
+            </div>
 
-                {/* Review body */}
-                <p className="text-xs text-gray-500 leading-relaxed pl-8">{review.body}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((tag, i) => <TagPill key={i} label={tag} />)}
+            </div>
+
+            {spot.address && (
+              <div className="flex items-center gap-1.5 text-xs text-[#6B6355]">
+                <MapPinIcon className="w-4 h-4 text-[#C4811A] shrink-0" />
+                {spot.address}
               </div>
-            ))}
+            )}
+
+            {spot.opening_hours && (
+              <div className="flex items-center gap-1.5 text-xs text-[#6B6355]">
+                <ClockIcon className="w-4 h-4 text-[#C4811A] shrink-0" />
+                {spot.is_24hr
+                  ? 'Open 24/7'
+                  : `${spot.opening_hours.open ?? '?'} — ${spot.opening_hours.close ?? '?'}`}
+                {spot.opening_hours.days?.length > 0 && ` · ${spot.opening_hours.days.join(', ')}`}
+              </div>
+            )}
+
+            {spot.description && (
+              <p className="text-sm text-[#6B6355] leading-relaxed border-t border-[#D4CCBA] pt-3">
+                {spot.description}
+              </p>
+            )}
+          </div>
+
+          {/* Photo gallery */}
+          {spot.photos?.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+              {spot.photos.map((photo, i) => (
+                <img
+                  key={i}
+                  src={resolveUrl(photo.storage_url)}
+                  alt=""
+                  className="w-36 h-24 object-cover rounded-xl shrink-0 border border-[#D4CCBA]"
+                />
+              ))}
+            </div>
+          )}
+
+          <div className="border-t border-dashed border-[#D4CCBA]" />
+
+          {/* Reviews list */}
+          <div className="flex flex-col gap-4 pb-8">
+            <h2 className="text-sm font-black text-[#0F2D1C] tracking-widest uppercase flex items-center gap-2">
+              <span className="w-1 h-4 bg-[#C4811A] rounded-full inline-block" />
+              Reviews ({reviews.length})
+            </h2>
+
+            {reviews.length === 0 ? (
+              <p className="text-xs text-[#6B6355] italic">No reviews yet — be the first!</p>
+            ) : (
+              reviews.map(review => (
+                <div key={review.id} className="flex flex-col gap-2 py-4 border-b border-[#EBE6D8] last:border-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-[#D4CCBA] flex items-center justify-center">
+                      <UserCircleIcon className="w-6 h-6 text-[#0F2D1C]" />
+                    </div>
+                    <span className="text-xs font-bold text-[#0F2D1C]">
+                      {review.profiles?.username ?? 'Anonymous'}
+                    </span>
+                    <StarRating rating={review.stars} />
+                  </div>
+                  <p className="text-xs text-[#6B6355] leading-relaxed pl-9">{review.body}</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        {/* ── RIGHT PANEL: Leave a Review ── */}
-        <div className="w-[300px] flex-shrink-0 bg-gray-50 border-l border-gray-200 px-5 py-6 flex flex-col gap-4">
+        {/* RIGHT PANEL */}
+        <div className="w-[360px] flex-shrink-0 bg-[#0F2D1C] border-l border-[#1E4A2A] px-6 py-8 flex flex-col gap-6 overflow-y-auto">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-base font-black text-[#CFA000] tracking-widest uppercase text-center">
+              Leave a Review
+            </h2>
+            <div className="h-px bg-[#1E4A2A] w-full" />
+          </div>
 
-          <h2 className="text-sm font-black text-gray-800 tracking-widest uppercase text-center">Leave a Review</h2>
-
-          {/* Image upload previews */}
-          <div className="flex gap-2 flex-wrap">
-            {reviewImages.map((src, i) => (
-              <div key={i} className="relative w-16 h-16">
-                <img src={src} className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
-                <button
-                  onClick={() => setReviewImages(prev => prev.filter((_, idx) => idx !== i))}
-                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center"
-                >✕</button>
+          {!user ? (
+            <div className="flex flex-col gap-4 items-center text-center mt-4">
+              <UserCircleIcon className="w-12 h-12 text-[#2E6B3E]" />
+              <p className="text-sm text-[#D4CCBA]">You need to be logged in to leave a review.</p>
+              <Link
+                href="/login"
+                className="w-full py-3 text-sm font-bold rounded-xl bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition text-center uppercase tracking-widest"
+              >
+                Log In
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xs font-bold text-[#CFA000] uppercase tracking-widest">Your Rating</h3>
+                <div className="bg-[#1E4A2A] rounded-xl p-3 flex items-center justify-center">
+                  <StarRating rating={reviewRating} interactive onRate={setReviewRating} />
+                </div>
+                {reviewRating > 0 && (
+                  <p className="text-xs text-[#8FBB9E] text-center">
+                    {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][reviewRating]}
+                  </p>
+                )}
               </div>
-            ))}
-          </div>
 
-          {/* Upload button */}
-          <label className="w-full py-2 text-xs font-semibold border border-gray-300 rounded-lg text-center cursor-pointer hover:bg-gray-100 transition">
-            + UPLOAD
-            <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
-          </label>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xs font-bold text-[#CFA000] uppercase tracking-widest">Your Review</h3>
+                <textarea
+                  placeholder="Share your experience with this spot..."
+                  value={reviewText}
+                  onChange={e => setReviewText(e.target.value)}
+                  rows={8}
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-[#1E4A2A] outline-none focus:border-[#CFA000] bg-[#1E4A2A] text-[#F5F2EA] placeholder-[#4A7C59] resize-none transition"
+                />
+                <p className="text-[10px] text-[#4A7C59] text-right">{reviewText.length} chars</p>
+              </div>
 
-          {/* Divider */}
-          <div className="border-t border-gray-200" />
-
-          {/* Review form */}
-          <div className="flex flex-col gap-3">
-            <h3 className="text-sm font-bold text-gray-700">Review</h3>
-
-            {/* Interactive star rating */}
-            <StarRating rating={reviewRating} interactive onRate={setReviewRating} />
-
-            {/* Review text */}
-            <textarea
-              placeholder="Write your review..."
-              value={reviewText}
-              onChange={e => setReviewText(e.target.value)}
-              rows={5}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 outline-none focus:border-gray-400 bg-white resize-none"
-            />
-
-            {/* Submit */}
-            <button
-              onClick={handleSubmitReview}
-              className="w-full py-2.5 text-xs font-bold rounded-lg border border-gray-400 hover:bg-gray-800 hover:text-white transition"
-            >
-              SUBMIT REVIEW
-            </button>
-          </div>
+              <button
+                onClick={handleSubmitReview}
+                disabled={submitting}
+                className="w-full py-3 text-sm font-bold rounded-xl bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition-all duration-200 uppercase tracking-widest disabled:opacity-50"
+              >
+                {submitting ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
