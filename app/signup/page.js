@@ -88,6 +88,7 @@ export default function SignupPage() {
 
       setTimeout(() => {
         router.push('/login');
+        router.refresh();
       }, 1500);
 
     } catch (err) {

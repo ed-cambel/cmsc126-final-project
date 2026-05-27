@@ -30,10 +30,11 @@ export async function middleware(request) {
     );
 
     const { data: { user } } = await supabase.auth.getUser();
+    await supabase.auth.getSession(); // refresh session cookies
     const pathname = request.nextUrl.pathname;
 
     // public routes that don't require authentication
-    const publicRoutes = ['/', '/discover', '/login', '/signup', '/spot'];
+    const publicRoutes = ['/', '/discover', '/login', '/signup', '/spot', '/auth'];
 
     const isPublicRoute = publicRoutes.some(route => {
         if (route === '/') return pathname === '/';
