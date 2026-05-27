@@ -33,7 +33,7 @@ export async function middleware(request) {
     const pathname = request.nextUrl.pathname;
 
     // public routes that don't require authentication
-    const publicRoutes = ['/', '/discover', '/login', '/signup', '/spot/[id]'];
+    const publicRoutes = ['/', '/discover', '/login', '/signup', '/spot'];
 
     const isPublicRoute = publicRoutes.some(route => {
         if (route === '/') return pathname === '/';
