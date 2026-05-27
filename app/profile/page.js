@@ -63,13 +63,13 @@ function SpotRow({ spot, actionLabel, onAction }) {
             <div className="flex items-center gap-2 flex-shrink-0">
                 <Link
                     href={`/spot/${spot.id}`}
-                    className="text-xs font-semibold px-3 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition"
+                    className="text-xs font-bold px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition"
                 >
                     VIEW
                 </Link>
                 <button
                     onClick={() => onAction(spot.id)}
-                    className={`text-xs font-semibold px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 transition ${actionLabel === 'REMOVE' ? 'hover:text-red-600 hover:border-red-200' : ''}`}
+                    className={`text-xs font-bold px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition ${actionLabel === 'REMOVE' ? 'hover:text-red-600 hover:border-red-200' : ''}`}
                 >
                     {actionLabel}
                 </button>
@@ -91,7 +91,6 @@ function ReviewRow({ review }) {
             {/* Top row: Spot Name, Rating, Date, and View Button */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    {/* 1. Make the spot name a clickable link */}
                     <Link 
                         href={`/spot/${review.spot_id}`} 
                         className="text-sm font-semibold text-gray-800 hover:text-gray-600 transition"
@@ -102,7 +101,6 @@ function ReviewRow({ review }) {
                     <span className="text-[10px] text-gray-400">· {dateStr}</span>
                 </div>
 
-                {/* 2. Add a clear VIEW button to match the other tabs */}
                 <Link
                     href={`/spot/${review.spot_id}`}
                     className="text-[10px] font-bold px-2 py-1 border border-gray-300 rounded text-gray-600 hover:bg-gray-100 transition"
