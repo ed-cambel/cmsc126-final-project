@@ -90,11 +90,11 @@ export default function StudySpot() {
       {/* MAIN BODY */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* MAP — 3/4 */}
+        {/* MAP */}
         <div className="flex-3 relative bg-green-100">
           
             <div className="absolute inset-0 w-full h-full z-0">
-                <MapComponent zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} searchLocation={searchLocation}/>
+            <MapComponent key="main-map" zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} searchLocation={searchLocation}/>
               </div>
 
               {/* Active Map Controls */}
@@ -102,28 +102,28 @@ export default function StudySpot() {
               {/* Current Location Target Button */}
               <button
                 onClick={() => setLocateTrigger(prev => prev + 1)}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              className="w-8 h-8 flex items-center justify-center bg-[#0F2D1C] border border-[#1E4A2A] rounded-md shadow-md hover:bg-[#C4811A] text-[#D4CCBA] text-sm font-bold active:bg-[#1E4A2A] transition"
               >
                 ⌖
               </button>
               {/* Zoom In Button */}
               <button
                 onClick={() => { setZoomTrigger("in"); setTimeout(() => setZoomTrigger(null), 50); }}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+                className="w-8 h-8 flex items-center justify-center bg-[#0F2D1C] border border-[#1E4A2A] rounded-md shadow-md hover:bg-[#C4811A] text-[#D4CCBA] text-sm font-bold active:bg-[#1E4A2A] transition"
               >
                 +
               </button>
               {/* Zoom Out Button */}
               <button
                 onClick={() => { setZoomTrigger("out"); setTimeout(() => setZoomTrigger(null), 50); }}
-                className="w-8 h-8 flex items-center justify-center bg-[#F5F2EA] border-[#D4CCBA] rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              className="w-8 h-8 flex items-center justify-center bg-[#0F2D1C] border border-[#1E4A2A] rounded-md shadow-md hover:bg-[#C4811A] text-[#D4CCBA] text-sm font-bold active:bg-[#1E4A2A] transition"
               >
                 -
               </button>
             </div>
         </div>
 
-        {/* SPOT LIST — 1/4 */}
+        {/* SPOT LIST */}
         <div className="flex-1 flex flex-col border-2 border-[#0F2D1C] bg-[#F5F2EA] hover:bg-[#EBE6D8]overflow-hidden min-w-55">
           <div className="px-4 py-3 border-b-2 border-[#0F2D1C] shrink-0">
             <span className="text-sm font-semibold text-[#0F2D1C]">Study Spots</span>

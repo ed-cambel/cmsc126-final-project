@@ -45,8 +45,13 @@ function MapController({ center, searchLocation, zoomTrigger, locateTrigger }) {
 
 // MAIN MAP COMPONENT
 export default function Map({ zoomTrigger, locateTrigger, searchLocation }) { 
+  const [mounted, setMounted] = useState(false);
   const [userLocation, setUserLocation] = useState([10.6419, 122.2358]); 
   const [pinnedLocation, setPinnedLocation] = useState(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch real browser location on load
   useEffect(() => {

@@ -16,7 +16,7 @@ const supabase = createClient();
 
 const AddSpotMap = dynamic(() => import("@/components/add_map"), {
   loading: () => <div className="text-xs text-gray-400 p-4">Loading map canvas...</div>,
-  ssr: false, 
+  ssr: false,
 });
 
 const TAG_GROUPS = [
@@ -28,8 +28,8 @@ const TAG_GROUPS = [
 
 export default function AddPage() {
   const router = useRouter();
-  
-  const [form, setForm] = useState({ name: '', address: '', description: '', lat: null, lng: null });
+
+  const [form, setForm] = useState({ name: '', address: '', description: '', lat: null, lng: null, is_24hr: false, opening_hours: {} });
   const [selectedTags, setSelectedTags] = useState({});
   const [images, setImages] = useState([]);
   const [errors, setErrors] = useState({});
@@ -49,7 +49,7 @@ export default function AddPage() {
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     const urls = files.map(f => URL.createObjectURL(f));
-    setImages(prev => [...prev, ...urls].slice(0, 3));
+    setImages(prev => [...prev, ...urls].slice(0, 5));
   };
 
   const handleMapLocationSelect = ({ lat, lng, address }) => {
@@ -57,7 +57,7 @@ export default function AddPage() {
       ...prev,
       lat: lat,
       lng: lng,
-      address: address ? address : prev.address 
+      address: address ? address : prev.address
     }));
   };
 
@@ -87,8 +87,10 @@ export default function AddPage() {
       noise_level: selectedTags.noise,
       environment: selectedTags.environment,
       location_type: selectedTags.location,
-      lat: form.lat, 
-      lng: form.lng  
+      lat: form.lat,
+      lng: form.lng,
+      is_24hr: form.is_24hr,
+      opening_hours: form.is_24hr ? null : form.opening_hours
     });
 
     if (error) {
@@ -97,12 +99,12 @@ export default function AddPage() {
     }
 
     alert('Submitted!');
-    router.push('/'); 
+    router.push('/');
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F5F2EA] flex flex-col">
-      
+    <div className="min-h-screen w-full bg-[#F5F2EA] flex flex-col overflow-y-auto pb-24">
+
       {/* Header */}
       <div className='relative w-full flex items-center px-6 py-3 border-[#0F2D1C] bg-[#F5F2EA] border-b-2 shrink-0 z-10'>
         <Link href="/" className='flex items-center gap-1 text-base font-medium text-[#0F2D1C] hover:text-[#C4811A] transition'>
@@ -112,8 +114,8 @@ export default function AddPage() {
       </div>
 
       {/* Clear out flex constraints so columns can stack normally if they run out of vertical room */}
-      <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-6">
-        
+      <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-6 items-stretch">
+
         {/* Left Column */}
         <div className="w-full md:w-[50%] flex flex-col gap-4">
 
@@ -159,7 +161,7 @@ export default function AddPage() {
                 </span>
               )}
             </label>
-            
+
             <div className="w-full h-[350px] bg-white rounded-lg shadow-inner overflow-hidden border border-gray-200">
               <AddSpotMap onLocationSelect={handleMapLocationSelect} />
             </div>
@@ -179,7 +181,70 @@ export default function AddPage() {
         </div>
 
         {/* Right Column */}
-        <div className="w-full md:w-[50%] flex flex-col bg-[#0F2D1C] border border-[#c5e08a] rounded-2xl p-5 gap-4 h-fit">
+        <div className="w-full md:w-[50%] flex flex-col bg-[#0F2D1C] border rounded-2xl p-5 gap-4 border-[#1E4A2A] ">
+          <div>
+            <div className="text-[#CFA000] text-[10px] font-bold uppercase tracking-widest mb-2">
+              Opening Hours
+            </div>
+
+            {/* 24/7 toggle */}
+            <label className="flex items-center gap-2 mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_24hr ?? false}
+                onChange={e => setForm(p => ({ ...p, is_24hr: e.target.checked }))}
+                className="accent-[#CFA000]"
+              />
+              <span className="text-[10px] text-[#D4CCBA] uppercase tracking-wide">Open 24/7</span>
+            </label>
+            
+            {!form.is_24hr && (
+              <div className="flex flex-col gap-3">
+                {/* Days */}
+                <div className="flex flex-wrap gap-2">
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                    <label key={day} className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.opening_hours?.days?.includes(day) ?? false}
+                        onChange={e => {
+                          const days = form.opening_hours?.days ?? [];
+                          const updated = e.target.checked
+                            ? [...days, day]
+                            : days.filter(d => d !== day);
+                          setForm(p => ({ ...p, opening_hours: { ...p.opening_hours, days: updated } }));
+                        }}
+                        className="accent-[#CFA000]"
+                      />
+                      <span className="text-[10px] text-[#D4CCBA] uppercase tracking-wide">{day}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Time inputs */}
+                <div className="flex gap-3 items-center">
+                  <div className="flex flex-col gap-1 flex-1">
+                    <span className="text-[9px] text-[#D4CCBA] uppercase tracking-wide">Opens</span>
+                    <input
+                      type="time"
+                      className="w-full px-2 py-1.5 text-[10px] rounded-md bg-[#1E4A2A] border border-[#2E6B3E] text-[#D4CCBA] outline-none focus:border-[#CFA000]"
+                      onChange={e => setForm(p => ({ ...p, opening_hours: { ...p.opening_hours, open: e.target.value } }))}
+                    />
+                  </div>
+                  <span className="text-[#D4CCBA] text-xs mt-4">—</span>
+                  <div className="flex flex-col gap-1 flex-1">
+                    <span className="text-[9px] text-[#D4CCBA] uppercase tracking-wide">Closes</span>
+                    <input
+                      type="time"
+                      className="w-full px-2 py-1.5 text-[10px] rounded-md bg-[#1E4A2A] border border-[#2E6B3E] text-[#D4CCBA] outline-none focus:border-[#CFA000]"
+                      onChange={e => setForm(p => ({ ...p, opening_hours: { ...p.opening_hours, close: e.target.value } }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+          </div>
 
           {/* Descriptors */}
           {TAG_GROUPS.map(({ label, category, values }) => (
@@ -209,15 +274,15 @@ export default function AddPage() {
           {/* Photo Uploader */}
           <div>
             <div className="text-[#CFA000] text-[10px] font-bold uppercase tracking-widest mb-2">
-              Photos
+              Photos <span className="text-[#D4CCBA] font-normal normal-case tracking-normal">({images.length}/5)</span>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <label className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-[#1E4A2A] rounded-lg cursor-pointer hover:border-[#D4CCBA] transition text-[#D4CCBA] text-xl">
+            <div className="flex gap-4 flex-wrap">
+              <label className="w-30 h-30 flex items-center justify-center border-2 border-dashed border-[#1E4A2A] rounded-lg cursor-pointer hover:border-[#D4CCBA] transition text-[#D4CCBA] text-2xl">
                 +
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
               </label>
               {images.map((src, i) => (
-                <div key={i} className="relative w-16 h-16">
+                <div key={i} className="relative w-20 h-20">
                   <Image src={src} alt="" fill className="object-cover rounded-lg border border-[#1E4A2A]" />
                   <button
                     type="button"
@@ -235,7 +300,7 @@ export default function AddPage() {
           <button
             type="button"
             onClick={handleSubmit}
-            className="mt-6 w-full py-2.5 text-sm font-bold rounded-xl bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition-all duration-200 uppercase tracking-widest flex items-center justify-center gap-2 group shrink-0"
+            className="mt-auto w-full py-2.5 text-sm font-bold rounded-xl bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition-all duration-200 uppercase tracking-widest flex items-center justify-center gap-2 group shrink-0"
           >
             SUBMIT STUDY SPOT
           </button>

@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en">
-      <body className={`bg-[#F5F2EA] ${inter.variable} ${poppins.variable} antialiased overflow-hidden`}>
+      <body className={`bg-[#F5F2EA] ${inter.variable} ${poppins.variable} antialiased ${pathname === '/' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         <SearchProvider>
           {!shouldHideSearchbar && <Searchbar />}
           {children}
