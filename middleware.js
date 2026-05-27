@@ -47,6 +47,11 @@ export async function middleware(request) {
         return NextResponse.redirect(loginUrl);
     }
 
+    // IF USER IS LOGGED IN and tries to access login/signup, redirect to home page
+    if (user && (pathname.startsWith('/login') || pathname.startsWith('/signup'))) {
+        return NextResponse.redirect(new URL('/', request.url));
+    }
+
     return response;
 }
 
