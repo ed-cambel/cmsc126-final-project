@@ -146,19 +146,8 @@ export default function LoginPage() {
             >
               {loading ? 'LOGGING IN...' : 'LOG IN'}
             </button>
-          </form>
 
-          {/* Divider line */}
-          <div className="relative flex items-center justify-center py-1">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-dashed border-[#1E4A2A]"></div>
-            </div>
-            <span className="relative px-3 text-[10px] font-black tracking-widest bg-[#0F2D1C] text-[#8FBB9E]">OR</span>
-          </div>
-
-          {/* Secondary Action Block */}
-          <div className="flex flex-col gap-3 text-center">
-            {/* Google sign-in */}
+              {/* Google sign-in */}
             <button
               type="button"
               onClick={handleGoogleLogin}
@@ -173,6 +162,18 @@ export default function LoginPage() {
               LOG IN WITH UP MAIL
             </button>
 
+          </form>
+
+          {/* Divider line */}
+          <div className="relative flex items-center justify-center py-1">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-dashed border-[#1E4A2A]"></div>
+            </div>
+            <span className="relative px-3 text-[10px] font-black tracking-widest bg-[#0F2D1C] text-[#8FBB9E]">OR</span>
+          </div>
+
+          {/* Secondary Action Block */}
+          <div className="flex flex-col gap-3 text-center">
             <button
               onClick={continueAsGuest}
               className="w-full h-11 text-xs font-bold rounded-lg border-2 border-[#1E4A2A] text-[#D4CCBA] hover:bg-[#1E4A2A] hover:text-[#F5F2EA] transition uppercase tracking-widest"
