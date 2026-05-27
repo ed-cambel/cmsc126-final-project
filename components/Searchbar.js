@@ -89,7 +89,7 @@ export default function Searchbar() {
         const latlng = [parseFloat(item.lat), parseFloat(item.lon)];
         setSearchQuery(item.display_name);
         setSearchLocation(latlng);
-        setPinnedLocation(latlng);
+        // setPinnedLocation(latlng);
         setShowDropdown(false);
     };
 
