@@ -257,11 +257,6 @@ export default function DiscoverPage() {
   return (
     <div className="min-h-screen bg-[#F5F2EA] overflow-y-auto pb-32">
       <div>
-        <Filterbar
-          selectedFilters={selectedFilters}
-          onChange={setSelectedFilters}
-          resultCount={filteredSpots.length}
-        />
 
         {/* Featured This Week */}
         <div className="px-6 py-5 flex flex-col gap-8">
