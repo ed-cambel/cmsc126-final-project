@@ -32,9 +32,6 @@ function SpotRow({ spot, actionLabel, onAction }) {
 
     return (
         <div className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
-            <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-xs flex-shrink-0 border border-gray-200 overflow-hidden">
-                {/* fetch from your photos table */}
-                IMAGE
             {/* Image Container */}
             <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-xs flex-shrink-0 border border-gray-200 overflow-hidden relative">
                 {coverPhoto ? (
@@ -94,7 +91,6 @@ function ReviewRow({ review }) {
             {/* Top row: Spot Name, Rating, Date, and View Button */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    {/* 1. Make the spot name a clickable link */}
                     <Link 
                         href={`/spot/${review.spot_id}`} 
                         className="text-sm font-semibold text-gray-800 hover:text-gray-600 transition"
@@ -105,7 +101,6 @@ function ReviewRow({ review }) {
                     <span className="text-[10px] text-gray-400">· {dateStr}</span>
                 </div>
 
-                {/* 2. Add a clear VIEW button to match the other tabs */}
                 <Link
                     href={`/spot/${review.spot_id}`}
                     className="text-[10px] font-bold px-2 py-1 border border-gray-300 rounded text-gray-600 hover:bg-gray-100 transition"
@@ -225,7 +220,7 @@ export default function ProfilePage() {
     // ── Handlers for Custom Modal ──
     const handleRemoveClick = (spotId) => {
         setSelectedSpotId(spotId);
-        setShowModal(true); // Open the modal
+        setShowModal(true); 
     };
 
     const confirmRemoveSavedSpot = async () => {
@@ -240,11 +235,9 @@ export default function ProfilePage() {
         if (error) {
             console.error('Error removing saved spot:', error.message);
         } else {
-            // Success: optimistically update UI
             setSavedSpots((prevSpots) => prevSpots.filter(spot => spot.id !== selectedSpotId));
         }
 
-        // Close modal and reset state
         setShowModal(false);
         setSelectedSpotId(null);
     };
@@ -263,7 +256,7 @@ export default function ProfilePage() {
                                 key={spot.id} 
                                 spot={spot} 
                                 actionLabel="REMOVE" 
-                                onAction={handleRemoveClick} // Use new handler here
+                                onAction={handleRemoveClick} 
                             />
                         ))
                     )}
@@ -380,7 +373,10 @@ export default function ProfilePage() {
 
                         {/* Edit and Logout buttons */}
                         <div className="grid grid-cols-2 gap-2">
-                            <button className="py-2 text-xs font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+                            <button 
+                                onClick={() => router.push('/profile/edit')}
+                                className="py-2 text-xs font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition text-center block w-full"
+                            >
                                 EDIT
                             </button>
                             <button 
@@ -392,22 +388,6 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    <div className="flex-1" />
-
-                    {/* Edit and Logout buttons */}
-                    <div className="grid grid-cols-2 gap-2">
-                        <button 
-                            onClick={() => router.push('/profile/edit')}
-                            className="py-2 text-xs font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition text-center block w-full"
-                        >
-                            EDIT
-                        </button>
-                        <button 
-                            onClick={handleLogout}
-                            className="py-2 text-xs font-semibold border border-gray-300 rounded-lg hover:bg-gray-100 transition text-red-600 hover:text-red-700 hover:border-red-300"
-                        >
-                            LOG OUT
-                        </button>
                     {/* ── RIGHT CONTENT PANEL ── */}
                     <div className="flex-1 overflow-y-auto px-8 py-6">
                         <div className="mb-4">
