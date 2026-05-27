@@ -132,7 +132,7 @@ export default function EditProfilePage() {
             </div>
 
             {/* Form layout wrapper */}
-            <div className="max-w-md mx-auto mt-8 px-4 pb-12">
+            <div className="max-w-md mx-auto mt-8 px-4 pb-24">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                     
                     {message.text && (
@@ -150,7 +150,7 @@ export default function EditProfilePage() {
                         {/* Profile Details section */}
                         <div>
                             <span className="text-[10px] font-bold text-gray-400 tracking-widest uppercase block mb-3">
-                                Public Profiles Details
+                                Profile Details
                             </span>
                             
                             <div className="flex flex-col gap-3">
