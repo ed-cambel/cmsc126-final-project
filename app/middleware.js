@@ -43,8 +43,13 @@ export async function middleware(request) {
     // if route not public, redirect to login with redirect param
     if (!isPublicRoute && !user) {
         const loginUrl = new URL('/login', request.url);
-        loginUrl.searchParams.set('redirect', pathname); // Keeps track of where they wanted to go and redirects them there after login
+        loginUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(loginUrl);
+    }
+
+    // redirect logged-in users away from login/signup pages
+    if (user && (pathname === '/login' || pathname === '/signup')) {
+        return NextResponse.redirect(new URL('/', request.url));
     }
 
     return response;
