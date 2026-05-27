@@ -11,6 +11,8 @@ import { createClient } from '@/lib/supabase/client';
 import { BookmarkIcon } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
 import { useRouter } from 'next/navigation';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { getDistance } from '@/lib/distance';
 
 const supabase = createClient();
 
@@ -78,7 +80,7 @@ function SectionHeader({ title }) {
 }
 
 // card component for each spot in each category
-function SpotCard({ spot, savedIds, onBookmark }) {
+function SpotCard({ spot, savedIds, onBookmark, userLocation }) {
   const [hovered, setHovered] = useState(false);
   const isBookmarked = savedIds?.has(spot.id);
   const tags = [
@@ -88,6 +90,8 @@ function SpotCard({ spot, savedIds, onBookmark }) {
     spot.environment ? getFilterLabel('environment', spot.environment) : null,
     spot.location_type ? getFilterLabel('location', spot.location_type) : null
   ].filter(Boolean);
+
+  const dist = userLocation && spot.lat && spot.lng ? getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng) : null;
 
   const displayImage = spot.photos?.[0]?.storage_url;
 
@@ -121,6 +125,10 @@ function SpotCard({ spot, savedIds, onBookmark }) {
         <span className={`text-[10px] ${hovered ? 'text-[#D4CCBA]' : 'text-[#6B6355]'}`}>
           ({spot.computed_review_count ?? spot.review_count ?? 0} reviews)
         </span>
+
+        <span className={`text-[10px] ${hovered ? 'text-[#D4CCBA]' : 'text-[#6B6355]'}`}>
+          ({spot.computed_review_count ?? 0} reviews){dist ? ` · ${dist}` : ''}
+        </span>
       </div>
 
       <div className="flex flex-wrap gap-1 mt-auto">
@@ -131,14 +139,14 @@ function SpotCard({ spot, savedIds, onBookmark }) {
 }
 
 // title: section heading, spots: array of spot objects
-function HorizontalSection({ title, spots, savedIds, onBookmark }) {
+function HorizontalSection({ title, spots, savedIds, onBookmark, userLocation }) {
   if (!spots || spots.length === 0) return null;
   return (
     <div className="flex flex-col">
       <SectionHeader title={title} />
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
         {spots.map(spot => (
-          <SpotCard key={spot.id} spot={spot} savedIds={savedIds} onBookmark={onBookmark} />
+          <SpotCard key={spot.id} spot={spot} savedIds={savedIds} onBookmark={onBookmark} userLocation={userLocation} />
         ))}
       </div>
     </div>
@@ -153,6 +161,8 @@ export default function DiscoverPage() {
   const [savedIds, setSavedIds] = useState(new Set());
   const [currentUser, setCurrentUser] = useState(null);
   const router = useRouter();
+  const userLocation = useGeolocation();
+  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -306,11 +316,11 @@ export default function DiscoverPage() {
             <div className="text-xs text-[#0F2D1C]">Loading spots...</div>
           ) : (
             <>
-              <HorizontalSection title="Top-Rated" spots={topRated} savedIds={savedIds} onBookmark={handleBookmark} />
-              <HorizontalSection title="Recently Added" spots={recentlyAdded} savedIds={savedIds} onBookmark={handleBookmark} />
-              <HorizontalSection title="Best for Studying" spots={bestForStudying} savedIds={savedIds} onBookmark={handleBookmark} />
-              <HorizontalSection title="Hidden Gems" spots={hiddenGems} savedIds={savedIds} onBookmark={handleBookmark} />
-              <HorizontalSection title="Outdoor Spots" spots={outdoor} savedIds={savedIds} onBookmark={handleBookmark} />
+                <HorizontalSection title="Top-Rated" spots={topRated} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+              <HorizontalSection title="Recently Added" spots={recentlyAdded} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+              <HorizontalSection title="Best for Studying" spots={bestForStudying} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+              <HorizontalSection title="Hidden Gems" spots={hiddenGems} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+              <HorizontalSection title="Outdoor Spots" spots={outdoor} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
             </>
           )}
         </div>

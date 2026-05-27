@@ -9,6 +9,10 @@ import { UserIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSearch } from '@/context/SearchContext'
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+
+const supabase = createClient();
 
 export default function Searchbar() {
     const { setSearchLocation } = useSearch();
@@ -16,6 +20,7 @@ export default function Searchbar() {
     const [suggestions, setSuggestions] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef(null);
+    const router = useRouter();
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -32,12 +37,39 @@ export default function Searchbar() {
 
         const delay = setTimeout(async () => {
             try {
+                const results = []
+
+                // search db first
+                const { data: spots, error } = await supabase
+                    .from('spots')
+                    .select('id, name, lat, lng')
+                    .ilike('name', `%${searchQuery}%`)
+                    .limit(3);
+
+                if (spots) {
+                    spots.forEach(spot => {
+                        results.push({
+                            place_id: `spot-${spot.id}`,
+                            display_name: spot.name,
+                            lat: spot.lat,
+                            lon: spot.lng,
+                            isSpot: true,
+                            spotId: spot.id
+
+                        })
+                    });
+                }
+
+                // check nominatim if db results < 3
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`
                 );
-                const data = await response.json();
-                setSuggestions(data);
-                setShowDropdown(data.length > 0);
+
+                const nominatim = await response.json();
+                nominatim.forEach(item => results.push({ ...item, isSpot: false }));
+
+                setSuggestions(results);
+                setShowDropdown(results.length > 0);
             } catch (error) {
                 console.error("Search error:", error);
             }
@@ -47,6 +79,13 @@ export default function Searchbar() {
     }, [searchQuery]);
 
     const handleSelectSuggestion = (item) => {
+        if (item.isSpot && item.spotId) {
+            router.push(`/spot/${item.spotId}`);
+            setSearchQuery('');
+            setShowDropdown(false);
+            return;
+        }
+
         const latlng = [parseFloat(item.lat), parseFloat(item.lon)];
         setSearchQuery(item.display_name);
         setSearchLocation(latlng);
@@ -93,9 +132,25 @@ export default function Searchbar() {
                                 key={item.place_id}
                                 type='button'
                                 onClick={() => handleSelectSuggestion(item)}
-                                className='w-full text-left px-4 py-2 text-xs text-[#0F2D1C] hover:bg-[#D4CCBA] transition border-b border-[#D4CCBA] last:border-0 truncate'
+                                className='w-full text-left px-4 py-2 text-xs text-[#0F2D1C] hover:bg-[#D4CCBA] transition border-b border-[#D4CCBA] last:border-0'
                             >
-                                {item.display_name}
+                                <div className='flex items-center gap-2'>
+                                    {item.isSpot && (
+                                        <span style={{
+                                            fontSize: '9px',
+                                            padding: '1px 6px',
+                                            borderRadius: '999px',
+                                            backgroundColor: '#C4811A',
+                                            color: '#F5F2EA',
+                                            fontWeight: 700,
+                                            whiteSpace: 'nowrap'
+                                        }}>SPOT</span>
+                                    )}
+                                    <span className='truncate'>{item.display_name}</span>
+                                </div>
+                                {item.sublabel && (
+                                    <div className='text-[10px] text-[#0F2D1C]/60 truncate mt-0.5'>{item.sublabel}</div>
+                                )}
                             </button>
                         ))}
                     </div>
