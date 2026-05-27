@@ -30,11 +30,10 @@ export async function middleware(request) {
     );
 
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase.auth.getSession(); // refresh session cookies
     const pathname = request.nextUrl.pathname;
 
     // public routes that don't require authentication
-    const publicRoutes = ['/', '/discover', '/login', '/signup', '/spot', '/auth'];
+    const publicRoutes = ['/', '/discover', '/login', '/signup', '/auth/callback'];
 
     const isPublicRoute = publicRoutes.some(route => {
         if (route === '/') return pathname === '/';
@@ -46,11 +45,6 @@ export async function middleware(request) {
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(loginUrl);
-    }
-
-    // redirect logged-in users away from login/signup pages
-    if (user && (pathname === '/login' || pathname === '/signup')) {
-        return NextResponse.redirect(new URL('/', request.url));
     }
 
     return response;

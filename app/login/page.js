@@ -51,7 +51,19 @@ export default function LoginPage() {
     if (error) setErrorMsg(error.message);
   }
 
-  function continueAsGuest() {
+  async function handleGoogleLogin() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) setErrorMsg(error.message);
+  }
+
+  async function continueAsGuest() {
+    setLoading(true);
+    await supabase.auth.signOut();
     router.push('/');
     router.refresh();
   }
