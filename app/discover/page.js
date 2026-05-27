@@ -123,11 +123,7 @@ function SpotCard({ spot, savedIds, onBookmark, userLocation }) {
       <div className="flex items-center gap-1">
         <StarRating rating={spot.computed_rating ?? spot.rating} />
         <span className={`text-[10px] ${hovered ? 'text-[#D4CCBA]' : 'text-[#6B6355]'}`}>
-          ({spot.computed_review_count ?? spot.review_count ?? 0} reviews)
-        </span>
-
-        <span className={`text-[10px] ${hovered ? 'text-[#D4CCBA]' : 'text-[#6B6355]'}`}>
-          ({spot.computed_review_count ?? 0} reviews){dist ? ` · ${dist}` : ''}
+          ({spot.computed_review_count ?? spot.review_count ?? 0} reviews){dist ? ` · ${dist}` : ''}
         </span>
       </div>
 
@@ -162,7 +158,7 @@ export default function DiscoverPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const router = useRouter();
   const userLocation = useGeolocation();
-  
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -316,7 +312,7 @@ export default function DiscoverPage() {
             <div className="text-xs text-[#0F2D1C]">Loading spots...</div>
           ) : (
             <>
-                <HorizontalSection title="Top-Rated" spots={topRated} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+              <HorizontalSection title="Top-Rated" spots={topRated} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
               <HorizontalSection title="Recently Added" spots={recentlyAdded} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
               <HorizontalSection title="Best for Studying" spots={bestForStudying} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
               <HorizontalSection title="Hidden Gems" spots={hiddenGems} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
