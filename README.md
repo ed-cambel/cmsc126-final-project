@@ -121,8 +121,5 @@ lib/
 
 ## Contributing
 
-This project is a CMSC 126 final project. For questions or issues, open a GitHub issue or reach out to the team.
+This project is a CMSC 126 final project by Git Git Aww.
 
----
-
-*Made with 💚 by UPV students, for UPV students.*
