@@ -4,39 +4,64 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Filterbar from '@/components/Filterbar';
+import { createClient } from '@/lib/supabase/client';
+import { BookmarkIcon } from '@heroicons/react/24/outline';
+import { BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
+import { useRouter } from 'next/navigation';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { getDistance } from '@/lib/distance';
 
-// Mock data for study spots - TODO: replace with Supabase data later
-const SPOTS = [
-  { id: 1, name: "TLRC", tags: { connectivity: "wifi", noise: "moderate", environment: "air_conditioned", location: "inside_upv" }, rating: 4.5, reviews: 12, dist: "0.1 km", description: "A productive space inside the Teaching and Learning Resource Center with fast wifi and plenty of outlets.", image_url: "https://placehold.co/600x400/EBE6D8/6B6355?text=TLRC", is_featured: false },
-  { id: 2, name: "UPV Library", tags: { connectivity: "wifi", noise: "silent", environment: "air_conditioned", location: "inside_upv" }, rating: 4.8, reviews: 34, dist: "0.3 km", description: "The main university library — silent, air-conditioned, and stocked with study tables and power outlets.", image_url: "https://placehold.co/600x400/D4CCBA/2A241E?text=UPV+Library", is_featured: true },
-  { id: 3, name: "AS Garden", tags: { connectivity: "no_wifi", noise: "quiet", environment: "outdoor", location: "inside_upv" }, rating: 4.2, reviews: 8, dist: "0.4 km", description: "A peaceful outdoor garden beside the AS building, great for reading or light studying in the breeze.", image_url: "https://placehold.co/600x400/C0DD97/27500A?text=AS+Garden", is_featured: false },
-  { id: 4, name: "Beans and Bubbles", tags: { connectivity: "wifi", noise: "moderate", environment: "air_conditioned", location: "outside_upv" }, rating: 4.6, reviews: 21, dist: "0.6 km", description: "A popular café just outside campus with strong wifi, good coffee, and a chill study atmosphere.", image_url: "https://placehold.co/600x400/EBE6D8/6B6355?text=Beans+%26+Bubbles", is_featured: false },
-  { id: 5, name: "Chancellor's Park", tags: { connectivity: "no_wifi", noise: "quiet", environment: "outdoor", location: "inside_upv" }, rating: 3.9, reviews: 5, dist: "0.2 km", description: "An open park area near the Chancellor's office — quiet in the mornings, good for solo studying.", image_url: "https://placehold.co/600x400/B8D98A/2E6B3E?text=Chancellor%27s+Park", is_featured: false },
-  { id: 6, name: "UPV Computer L3", tags: { connectivity: "wifi", noise: "silent", environment: "air_conditioned", location: "inside_upv" }, rating: 4.7, reviews: 19, dist: "0.5 km", description: "Third floor computer lab with reliable wifi, silent environment, and individual workstations.", image_url: "https://placehold.co/600x400/EBE6D8/0F2D1C?text=Computer+L3", is_featured: false },
-  { id: 7, name: "Jollibee Miagao", tags: { connectivity: "wifi", noise: "noisy", environment: "air_conditioned", location: "outside_upv" }, rating: 3.5, reviews: 44, dist: "1.2 km", description: "The nearest Jollibee branch — not the quietest, but air-conditioned with free wifi and long hours.", image_url: "https://placehold.co/600x400/FAC775/633806?text=Jollibee+Miagao", is_featured: false },
-  { id: 8, name: "Open Pavilion", tags: { connectivity: "no_wifi", noise: "moderate", environment: "outdoor", location: "inside_upv" }, rating: 4.0, reviews: 7, dist: "0.3 km", description: "A shaded outdoor pavilion on campus — good for group study sessions when the weather is nice.", image_url: "https://placehold.co/600x400/C0DD97/173404?text=Open+Pavilion", is_featured: false },
+const supabase = createClient();
+
+const FILTER_DEFS = [
+  { category: "connectivity", value: "wifi", label: "WIFI" },
+  { category: "connectivity", value: "no_wifi", label: "NO WIFI" },
+  { category: "connectivity", value: "outlet", label: "OUTLET" },
+  { category: "connectivity", value: "no_outlet", label: "NO OUTLET" },
+  { category: "noise", value: "silent", label: "SILENT" },
+  { category: "noise", value: "quiet", label: "QUIET" },
+  { category: "noise", value: "moderate", label: "MODERATE" },
+  { category: "noise", value: "noisy", label: "NOISY" },
+  { category: "environment", value: "air_conditioned", label: "AIR CONDITIONED" },
+  { category: "environment", value: "non_air_conditioned", label: "NON-AIR CONDITIONED" },
+  { category: "environment", value: "indoor", label: "INDOOR" },
+  { category: "environment", value: "outdoor", label: "OUTDOOR" },
+  { category: "location", value: "inside_upv", label: "INSIDE UPV" },
+  { category: "location", value: "outside_upv", label: "OUTSIDE UPV" },
 ];
 
+// 🛠️ FIXED: Normalized string lookups to catch case variations from Database Views
+function getFilterLabel(category, value) {
+  if (!value) return '';
+  const normalizedValue = String(value).toLowerCase().trim();
 
+  const def = FILTER_DEFS.find(d => d.category === category && d.value === normalizedValue);
+  return def ? def.label : normalizedValue.replace(/_/g, ' ').toUpperCase();
+}
 
 // makes a star rating string based on a numeric rating
 function StarRating({ rating }) {
+  const numericRating = Number(rating) || 0;
   return (
     <span className="text-xs text-[#C4811A]">
-      {'★'.repeat(Math.floor(rating))}{'☆'.repeat(5 - Math.floor(rating))}
-      <span className='text-[#6B6355]'>{rating}</span>
+      {'★'.repeat(Math.floor(numericRating))}
+      {'☆'.repeat(5 - Math.floor(numericRating))}
+      <span className='text-[#6B6355] ml-1'>{numericRating.toFixed(1)}</span>
     </span>
   );
 }
 
 // descriptor tags
-function TagPill({ label }) {
+function TagPill({ label, dark }) {
   return (
-    <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#EDF5D8] text-[#6B6355] border border-[#D4CCBA]">
-      {label.replace(/_/g, ' ').toUpperCase()}
+    <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold tracking-wide whitespace-nowrap uppercase border ${dark
+      ? 'bg-[#0F2D1C] text-[#F5F2EA] border-[#1E4A2A]'
+      : 'bg-[#F5F2EA] text-[#0F2D1C] border-[#0F2D1C]'
+      }`}>
+      {label}
     </span>
   );
 }
@@ -44,134 +69,253 @@ function TagPill({ label }) {
 // section header for each category
 function SectionHeader({ title }) {
   return (
-    <div className="flex flex-col gap-1 mb-3">
-      <h2 className="text-sm font-black text-[#0F2D1C] tracking-widest uppercase">{title}</h2>
+    <div className="flex flex-col gap-1 mb-4">
+      <h2 className="text-base font-black text-[#0F2D1C] tracking-widest uppercase flex items-center gap-2">
+        <span className="w-1 h-4 bg-[#C4811A] rounded-full inline-block"></span>
+        {title}
+      </h2>
       <div className="h-px bg-[#D4CCBA] w-full" />
     </div>
   );
 }
 
 // card component for each spot in each category
-function SpotCard({ spot, active }) {
+function SpotCard({ spot, savedIds, onBookmark, userLocation }) {
+  const [hovered, setHovered] = useState(false);
+  const isBookmarked = savedIds?.has(spot.id);
+  const tags = [
+    (spot.has_wifi === true || String(spot.has_wifi) === 'true') ? getFilterLabel('connectivity', 'wifi') : null,
+    (spot.has_outlets === true || String(spot.has_outlets) === 'true') ? getFilterLabel('connectivity', 'outlet') : null,
+    spot.noise_level ? getFilterLabel('noise', spot.noise_level) : null,
+    spot.environment ? getFilterLabel('environment', spot.environment) : null,
+    spot.location_type ? getFilterLabel('location', spot.location_type) : null
+  ].filter(Boolean);
+
+  const dist = userLocation && spot.lat && spot.lng ? getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng) : null;
+
+  const displayImage = spot.photos?.[0]?.storage_url;
+
   return (
     <Link
       href={`/spot/${spot.id}`}
-      className={`shrink-0 w-56 rounded-2xl border p-3 flex flex-col gap-2 hover:shadow-[#EBE6D8] transition bg-[#F5F2EA] ${active ? 'border-[#0F2D1C] border-2' : 'border-[#D4CCBA]'}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="shrink-0 w-56 h-64 rounded-2xl border border-[#D4CCBA] p-3 flex flex-col gap-2 transition bg-[#F5F2EA] hover:bg-[#1E4A2A] hover:border-[#0F2D1C] hover:shadow-lg relative"
     >
-      {/* Placeholder for spot photo -- TODO: fetch images from Supabase */}
-      <div className="w-full h-32 rounded-xl bg-[#EBE6D8] flex items-center justify-center text-[#6B6355] text-xs overflow-hidden">
-        [ photo ]
+      {/* Bookmark button */}
+      <button
+        onClick={e => onBookmark(e, spot.id)}
+        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-[#0F2D1C] flex items-center justify-center shadow hover:bg-[#1E4A2A] transition"
+      >
+        {isBookmarked
+          ? <BookmarkSolidIcon className="w-4 h-4 text-[#CFA000]" />
+          : <BookmarkIcon className="w-4 h-4 text-[#D4CCBA]" />}
+      </button>
+
+      <div className="w-full h-32 rounded-xl bg-[#EBE6D8] flex items-center justify-center text-[#6B6355] text-xs overflow-hidden shrink-0">
+        {displayImage
+          ? <img src={displayImage} alt={spot.name} className="w-full h-full object-cover" />
+          : <span className="italic">[ no photo ]</span>}
       </div>
 
-      {/* Spot name */}
-      <div className="text-sm font-bold text-[#2A241E]">{spot.name}</div>
+      <div className={`text-sm font-bold truncate ${hovered ? 'text-[#F5F2EA]' : 'text-[#2A241E]'}`}>{spot.name}</div>
 
-      {/* Rating and distance */}
-      <div className="flex items-center gap-1"> 
-        <StarRating rating={spot.rating} />
-        <span className="text-[10px] text-[#6B6355]">({spot.reviews} Reviews) · {spot.dist}</span>
+      <div className="flex items-center gap-1">
+        <StarRating rating={spot.computed_rating ?? spot.rating} />
+        <span className={`text-[10px] ${hovered ? 'text-[#D4CCBA]' : 'text-[#6B6355]'}`}>
+          ({spot.computed_review_count ?? spot.review_count ?? 0} reviews){dist ? ` · ${dist}` : ''}
+        </span>
       </div>
 
-      {/* Tag pills — show first 3 tags only */}
-      <div className="flex flex-wrap gap-1">
-        {Object.values(spot.tags).slice(0, 3).map((val, i) => (
-          <TagPill key={i} label={val} />
-        ))}
+      <div className="flex flex-wrap gap-1 mt-auto">
+        {tags.slice(0, 3).map((val, i) => <TagPill key={i} label={val} dark={hovered} />)}
       </div>
     </Link>
   );
 }
 
 // title: section heading, spots: array of spot objects
-function HorizontalSection({ title, spots }) {
+function HorizontalSection({ title, spots, savedIds, onBookmark, userLocation }) {
+  if (!spots || spots.length === 0) return null;
   return (
     <div className="flex flex-col">
       <SectionHeader title={title} />
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {spots.map((spot, i) => <SpotCard key={spot.id} spot={spot} active={i === 0} />)}
+        {spots.map(spot => (
+          <SpotCard key={spot.id} spot={spot} savedIds={savedIds} onBookmark={onBookmark} userLocation={userLocation} />
+        ))}
       </div>
     </div>
   );
 }
 
 export default function DiscoverPage() {
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [spots, setSpots] = useState([]);
+  const [featured, setFeatured] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState({});
+  const [savedIds, setSavedIds] = useState(new Set());
+  const [currentUser, setCurrentUser] = useState(null);
+  const router = useRouter();
+  const userLocation = useGeolocation();
 
-  // TODO: replace with filtered data from Supabase based on activeFilter
-  const featured = SPOTS[1];
-  const topRated = [...SPOTS].sort((a, b) => b.rating - a.rating).slice(0, 5);
-  const nearby = [...SPOTS].sort((a, b) => parseFloat(a.dist) - parseFloat(b.dist)).slice(0, 5);
-  const recentlyAdded = SPOTS.slice(-4).reverse();
-  const bestForStudying = SPOTS.filter(s => s.tags.noise === 'silent' && s.tags.connectivity === 'wifi');
-  const outdoor = SPOTS.filter(s => s.tags.environment === 'outdoor');
-  const hiddenGems = SPOTS.filter(s => s.rating >= 4.0 && s.reviews <= 8);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data, error } = await supabase
+        .from('spots_with_stats')
+        .select(`
+          *,
+          photos (
+            storage_url
+          )
+        `);
+
+      if (error) {
+        console.error('Error fetching spots:', error);
+        setLoading(false);
+        return;
+      }
+
+      setSpots(data || []);
+
+      // checks if spot is bookmarked by current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: savedData } = await supabase
+          .from('saved_spots')
+          .select('spot_id')
+          .eq('user_id', user.id);
+        setSavedIds(new Set(savedData?.map(s => s.spot_id) ?? []));
+        setCurrentUser(user);
+      }
+
+      const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      let { data: featuredData } = await supabase
+        .from('spots_with_stats')
+        .select(`*, photos (storage_url)`)
+        .gte('created_at', lastWeek)
+        .order('computed_rating', { ascending: false })
+        .limit(1);
+
+      if (!featuredData || featuredData.length === 0) {
+        const { data: fallback } = await supabase
+          .from('spots_with_stats')
+          .select(`*, photos (storage_url)`)
+          .order('computed_rating', { ascending: false })
+          .limit(1);
+        featuredData = fallback;
+      }
+
+      setFeatured(featuredData?.[0] ?? null);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  const handleBookmark = async (e, spotId) => {
+    e.preventDefault(); // prevent Link navigation
+    if (!currentUser) { router.push('/login'); return; }
+
+    if (savedIds.has(spotId)) {
+      await supabase
+        .from('saved_spots')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('spot_id', spotId);
+      setSavedIds(prev => { const next = new Set(prev); next.delete(spotId); return next; });
+    } else {
+      await supabase
+        .from('saved_spots')
+        .insert({ user_id: currentUser.id, spot_id: spotId });
+      setSavedIds(prev => new Set(prev).add(spotId));
+    }
+  };
+
+  const filteredSpots = useMemo(() => {
+    return spots.filter(spot => {
+      // 🛠️ FIXED: Normalizing filter matching to handle subtle data variations
+      if (selectedFilters.noise && String(spot.noise_level).toLowerCase() !== String(selectedFilters.noise).toLowerCase()) return false;
+      if (selectedFilters.environment && String(spot.environment).toLowerCase() !== String(selectedFilters.environment).toLowerCase()) return false;
+      if (selectedFilters.location && String(spot.location_type).toLowerCase() !== String(selectedFilters.location).toLowerCase()) return false;
+      if (selectedFilters.wifi && !spot.has_wifi) return false;
+      if (selectedFilters.outlets && !spot.has_outlets) return false;
+      return true;
+    });
+  }, [spots, selectedFilters]);
+
+  // Decoupled row arrays using useMemo
+  const topRated = useMemo(() => [...filteredSpots].sort((a, b) => (b.computed_rating ?? 0) - (a.computed_rating ?? 0)).slice(0, 5), [filteredSpots]);
+  const recentlyAdded = useMemo(() => [...filteredSpots].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5), [filteredSpots]);
+  const bestForStudying = useMemo(() => filteredSpots.filter(s => String(s.noise_level).toLowerCase() === 'silent' && s.has_wifi), [filteredSpots]);
+  const hiddenGems = useMemo(() => filteredSpots.filter(s => (s.computed_rating ?? s.rating ?? 0) >= 4.0 && (s.computed_review_count ?? s.review_count ?? 0) <= 8), [filteredSpots]);
+  const outdoor = useMemo(() => filteredSpots.filter(s => String(s.environment).toLowerCase() === 'outdoor'), [filteredSpots]);
+
+  const featuredImage = featured?.photos?.[0]?.storage_url;
 
   return (
     <div className="min-h-screen bg-[#F5F2EA] overflow-y-auto pb-32">
-      <div >
+      <div>
 
-        {/* import Filterbar component */}
-        <Filterbar
-          selectedFilters={selectedFilters}
-          onChange={setSelectedFilters}
-          resultCount={SPOTS.length}
-        />
-
-        {/* Featured This Week  */}
+        {/* Featured This Week */}
         <div className="px-6 py-5 flex flex-col gap-8">
           <div className="flex flex-col">
             <SectionHeader title="Featured This Week" />
-            {/* TODO: fetch featured spot from Supabase*/}
-
-            <Link href={`/spot/${featured.id}`} className="flex h-70 bg-[#F5F2EA] border border-[#D4CCBA] rounded-2xl overflow-hidden hover:bg-[#EBE6D8] transition">
-              { }
-              <div className="w-[45%] h-70 bg-[#EBE6D8] flex items-center justify-center text-[#6B6355] text-xs shrink-0">
-                [ photo ]
-              </div>
-
-              {/* Featured spot details -- TODO: replace with data from Supabase storage URL*/}
-              <div className="flex flex-col justify-between p-5 flex-1">
-                <div className="flex flex-col gap-2">
-                  <div className="h-5 bg-[#6B6355] rounded w-full" />
-                  <div className="flex items-center gap-1">
-                    <StarRating rating={featured.rating} />
-                    <span className="text-[10px] text-[#6B6355]">({featured.reviews} Reviews)</span>
-                  </div>
-                  <div className="h-3 bg-[#D4CCBA] rounded w-3/4" />
-                  <div className="h-3 bg-[#D4CCBA] rounded w-2/3" />
-                  <div className="h-3 bg-[#D4CCBA] rounded w-4/5" />
+            {loading ? (
+              <div className="h-70 bg-[#EBE6D8] rounded-2xl animate-pulse" />
+            ) : featured ? (
+              <Link href={`/spot/${featured.id}`} className="flex h-70 bg-[#F5F2EA] border border-[#D4CCBA] rounded-2xl overflow-hidden hover:bg-[#EBE6D8] transition">
+                <div className="w-[45%] h-70 bg-[#EBE6D8] flex items-center justify-center text-[#6B6355] text-xs shrink-0 overflow-hidden relative">
+                  {featuredImage ? (
+                    <img src={featuredImage} alt={featured.name} className="w-full h-full object-cover" />
+                  ) : (
+                    '[ no photo ]'
+                  )}
                 </div>
+                <div className="flex flex-col justify-between p-5 flex-1">
+                  <div className="flex flex-col gap-2">
+                    <div className="text-base font-bold text-[#0F2D1C]">{featured.name}</div>
+                    <div className="flex items-center gap-1">
+                      <StarRating rating={featured.computed_rating ?? featured.rating} />
+                      <span className="text-[10px] text-[#6B6355]">({featured.computed_review_count ?? featured.review_count ?? 0} reviews)</span>
+                    </div>
+                    <p className="text-xs text-[#6B6355] line-clamp-3">{featured.description}</p>
 
-                {/* CTA button */}
-                <button className="w-full py-2 text-xs font-bold rounded-lg bg-[#C4811A] text-[#FFF8EC] hover:bg-[#E8A825] transition tracking-widest">
-                  VIEW SPOT
-                </button>
-              </div>
-            </Link>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        featured.has_wifi ? getFilterLabel('connectivity', 'wifi') : null,
+                        featured.noise_level ? getFilterLabel('noise', featured.noise_level) : null,
+                        featured.environment ? getFilterLabel('environment', featured.environment) : null,
+                        featured.location_type ? getFilterLabel('location', featured.location_type) : null,
+                      ].filter(Boolean).slice(0, 3).map((tag, i) => (
+                        <TagPill key={i} label={tag} />
+                      ))}
+                    </div>
+                  </div>
+                  <button type="button" className="w-full py-2 text-xs font-bold rounded-lg bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition tracking-widest uppercase">
+                    VIEW SPOT
+                  </button>
+                </div>
+              </Link>
+            ) : (
+              <div className="text-xs text-[#6B6355]">No featured spot available.</div>
+            )}
           </div>
-        
 
-        
-        {/* Top Rated — sorted by highest rating */}
-        <HorizontalSection title="Top-Rated" spots={topRated} />
-
-        {/* Nearest to You — sorted by distance */}
-        <HorizontalSection title="Nearest to You" spots={nearby} />
-
-        {/* Best for Studying — silent spots with wifi only */}
-        {bestForStudying.length > 0 && <HorizontalSection title="Best for Studying" spots={bestForStudying} />}
-
-        {/* Hidden Gems — high rating but low review count */}
-        {hiddenGems.length > 0 && <HorizontalSection title="Hidden Gems" spots={hiddenGems} />}
-
-        {/* Outdoor Spots — spots tagged as outdoor */}
-        {outdoor.length > 0 && <HorizontalSection title="Outdoor Spots" spots={outdoor} />}
-
-        {/* Recently Added — last 4 spots, swap with created_at sort from Supabase */}
-        <HorizontalSection title="Recently Added" spots={recentlyAdded} />
+          {loading ? (
+            <div className="text-xs text-[#0F2D1C]">Loading spots...</div>
+          ) : (
+            <>
+              <HorizontalSection title="Top-Rated" spots={topRated} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+              <HorizontalSection title="Recently Added" spots={recentlyAdded} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+              <HorizontalSection title="Best for Studying" spots={bestForStudying} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+              <HorizontalSection title="Hidden Gems" spots={hiddenGems} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+              <HorizontalSection title="Outdoor Spots" spots={outdoor} savedIds={savedIds} onBookmark={handleBookmark} userLocation={userLocation} />
+            </>
+          )}
+        </div>
       </div>
-    </div>
     </div>
   );
 }

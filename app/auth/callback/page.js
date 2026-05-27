@@ -49,7 +49,7 @@ export default function AuthCallbackPage() {
         await supabase.from('profiles').insert({
         id: user.id,
 
-        username: user.email,
+        username: user.email.split('@')[0],
 
         avatar_url:
             user.user_metadata.avatar_url || '',

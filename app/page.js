@@ -8,6 +8,9 @@ import Filterbar from '@/components/Filterbar';
 import { ChevronRightIcon } from '@heroicons/react/16/solid';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useSearch } from '@/context/SearchContext';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { getDistance } from '@/lib/distance';
 
 const supabase = createClient();
 
@@ -76,16 +79,19 @@ function matchesFilters(spot, selectedFilters) {
 }
 
 export default function StudySpot() {
+  const { searchLocation } = useSearch();
   const [spots, setSpots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState({});
   const [activeSpotId, setActiveSpotId] = useState(null);
   const [zoomTrigger, setZoomTrigger] = useState(null);
   const [locateTrigger, setLocateTrigger] = useState(0);
+  const userLocation = useGeolocation();
+  
 
   useEffect(() => {
     const fetchSpots = async () => {
-      const { data, error } = await supabase.from('spots').select('*');
+      const { data, error } = await supabase.from('spots_with_stats').select('*');
       if (error) {
         console.error('Error fetching spots:', error);
       } else {
@@ -109,30 +115,11 @@ export default function StudySpot() {
       {/* MAIN BODY */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* MAP — 3/4 */}
-        <div className="flex-[3] relative">
-
-          <MapContainer
-            center={[10.3157, 123.8854]}
-            zoom={16}
-            className="w-full h-full z-0"
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            <FindMyLocation />
-          </MapContainer>
-
-          {/* <div className="absolute bottom-4 left-4 flex flex-col gap-1 z-[1000]">
-            {['+', '−'].map((icon, i) => (
-              <button
-                key={i}
-                className="w-8 h-8 flex items-center justify-center bg-[#F5F2EA] rounded-md shadow"
+        {/* MAP */}
         <div className="flex-3 relative bg-green-100">
           
             <div className="absolute inset-0 w-full h-full z-0">
-                <MapComponent zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} />
+            <MapComponent key="main-map" zoomTrigger={zoomTrigger} locateTrigger={locateTrigger} searchLocation={searchLocation}/>
               </div>
 
               {/* Active Map Controls */}
@@ -140,28 +127,28 @@ export default function StudySpot() {
               {/* Current Location Target Button */}
               <button
                 onClick={() => setLocateTrigger(prev => prev + 1)}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              className="w-8 h-8 flex items-center justify-center bg-[#0F2D1C] border border-[#1E4A2A] rounded-md shadow-md hover:bg-[#C4811A] text-[#D4CCBA] text-sm font-bold active:bg-[#1E4A2A] transition"
               >
                 ⌖
               </button>
               {/* Zoom In Button */}
               <button
                 onClick={() => { setZoomTrigger("in"); setTimeout(() => setZoomTrigger(null), 50); }}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+                className="w-8 h-8 flex items-center justify-center bg-[#0F2D1C] border border-[#1E4A2A] rounded-md shadow-md hover:bg-[#C4811A] text-[#D4CCBA] text-sm font-bold active:bg-[#1E4A2A] transition"
               >
                 +
               </button>
               {/* Zoom Out Button */}
               <button
                 onClick={() => { setZoomTrigger("out"); setTimeout(() => setZoomTrigger(null), 50); }}
-                className="w-8 h-8 flex items-center justify-center bg-[#F5F2EA] border-[#D4CCBA] rounded-md shadow-sm hover:bg-gray-50 text-sm font-bold active:bg-gray-100"
+              className="w-8 h-8 flex items-center justify-center bg-[#0F2D1C] border border-[#1E4A2A] rounded-md shadow-md hover:bg-[#C4811A] text-[#D4CCBA] text-sm font-bold active:bg-[#1E4A2A] transition"
               >
                 -
               </button>
             </div>
         </div>
 
-        {/* SPOT LIST — 1/4 */}
+        {/* SPOT LIST */}
         <div className="flex-1 flex flex-col border-2 border-[#0F2D1C] bg-[#F5F2EA] hover:bg-[#EBE6D8]overflow-hidden min-w-55">
           <div className="px-4 py-3 border-b-2 border-[#0F2D1C] shrink-0">
             <span className="text-sm font-semibold text-[#0F2D1C]">Study Spots</span>
@@ -185,7 +172,11 @@ export default function StudySpot() {
                 >
                   <div>
                     <div className="text-xs font-semibold text-[#0F2D1C] mb-0.5">{spot.name}</div>
-                    <div className="text-[10px] text-[#0F2D1C] mb-2">★ {spot.rating} · {spot.dist}</div>
+                    <div className="text-[10px] text-[#0F2D1C] mb-2">★ {spot.computed_rating ?? '—'} · ({spot.computed_review_count ?? 0} reviews)
+                    {userLocation && spot.lat && spot.lng && (
+                      <span className="ml-2">· {getDistance(userLocation.lat, userLocation.lng, spot.lat, spot.lng)}</span>
+                    )}
+                    </div>
                     <div className="flex flex-wrap gap-1">
                       <div className="flex flex-wrap gap-1">
                         {spot.has_wifi && <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#F5F2EA] text-[#0F2D1C] border border-[#0F2D1C]">WIFI</span>}

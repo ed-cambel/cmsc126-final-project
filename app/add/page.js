@@ -9,11 +9,16 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { ChevronLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import dynamic from 'next/dynamic';
 
 const supabase = createClient();
 
-// constants for spot descriptors
+const AddSpotMap = dynamic(() => import("@/components/add_map"), {
+  loading: () => <div className="text-xs text-gray-400 p-4">Loading map canvas...</div>,
+  ssr: false,
+});
+
 const TAG_GROUPS = [
   { label: 'Connectivity', category: 'connectivity', values: ['wifi', 'no_wifi', 'outlet', 'no_outlet'] },
   { label: 'Noise', category: 'noise', values: ['silent', 'quiet', 'moderate', 'noisy'] },
@@ -21,16 +26,14 @@ const TAG_GROUPS = [
   { label: 'Location', category: 'location', values: ['inside_upv', 'outside_upv'] }
 ];
 
-
 export default function AddPage() {
   const router = useRouter();
-  // state variable declarations for form inputs, tags, and images
-  const [form, setForm] = useState({ name: '', address: '', description: '' });
+
+  const [form, setForm] = useState({ name: '', address: '', description: '', lat: null, lng: null, is_24hr: false, opening_hours: {} });
   const [selectedTags, setSelectedTags] = useState({});
   const [images, setImages] = useState([]);
   const [errors, setErrors] = useState({});
 
-  // error handling for forms
   const handleTagClick = (category, value) => {
     setSelectedTags(prev => {
       const updated = { ...prev };
@@ -43,31 +46,46 @@ export default function AddPage() {
     });
   };
 
-  // image upload handler
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    const urls = files.map(f => URL.createObjectURL(f));
-    setImages(prev => [...prev, ...urls].slice(0, 3));
+    
+    const newImages = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+
+    
+    setImages(prev => [...prev, ...newImages].slice(0, 5));
   };
 
-  // form submission handler
+  const handleMapLocationSelect = ({ lat, lng, address }) => {
+    setForm(prev => ({
+      ...prev,
+      lat: lat,
+      lng: lng,
+      address: address ? address : prev.address
+    }));
+  };
+
   const handleSubmit = async () => {
     const newErrors = {};
-    if (!form.name || !form.address) {
-      newErrors.name = !form.name ? 'Name is required.' : '';
-      newErrors.address = !form.address ? 'Address is required.' : '';
-      setErrors(newErrors);
-      return;
+    if (!form.name) newErrors.name = 'Spot name is required';
+
+    if (!form.address && (form.lat === null || form.lng === null)) {
+      newErrors.address = 'Either an address or a pinned location on the map is required';
+    }
+
+    if (form.lat === null || form.lng === null) {
+      newErrors.address = 'Please pin the location on the map';
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
+    const { data: { user } } = await supabase.auth.getUser();
 
-    const {data: {user} } = await supabase.auth.getUser();
-
-    const {error} = await supabase.from('spots').insert({
+    const { data: spotData, error } = await supabase.from('spots').insert({
       name: form.name,
       address: form.address,
       description: form.description,
@@ -77,150 +95,256 @@ export default function AddPage() {
       noise_level: selectedTags.noise,
       environment: selectedTags.environment,
       location_type: selectedTags.location,
-      lat: 0,
-      lng: 0 // TODO: integrate geocoding API to get lat/lang from address
+      lat: form.lat,
+      lng: form.lng,
+      is_24hr: form.is_24hr,
+      opening_hours: form.is_24hr ? null : form.opening_hours
     })
+    .select()
+    .single();
 
     if (error) {
       alert('Error submitting spot: ' + error.message);
       return;
     }
 
-    console.log({ ...form, tags: selectedTags, images });
-    alert('Submitted!');
+    if (images.length > 0) {
+      for (const img of images) {
+        const file = img.file;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random()}.${fileExt}`;
 
-    router.push('/'); // redirect to main page after submission
+        const { error: uploadError } = await supabase.storage
+          .from('spot-photos')
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error(uploadError);
+          continue;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('spot-photos')
+          .getPublicUrl(fileName);
+
+        const publicUrl = publicUrlData.publicUrl;
+
+        await supabase.from('photos').insert({
+          spot_id: spotData.id,
+          uploaded_by: user.id,
+          storage_url: publicUrl
+        });
+      }
+    }
+
+    alert('Submitted!');
+    router.push('/');
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F2EA]">
-      <div className="w-full">
+    <div className="min-h-screen w-full bg-[#F5F2EA] flex flex-col overflow-y-auto pb-24">
 
-        {/* Header */}
-        <div className='relative w-full flex items-center px-6 py-3 border-[#0F2D1C] bg-[#F5F2EA] border-b-2 '>
-          <Link href="/" className='flex items-center gap-1 text-base font-medium text-[#0F2D1C] hover:text-[#C4811A] transition'>
-            <ChevronLeftIcon className='w-6 h-6' /> Back
-          </Link>
-          <h1 className='text-xl font-bold text-[#0F2D1C] absolute left-1/2 -translate-x-1/2 tracking-wide uppercase'>Add a Study Spot</h1>
-        </div>
+      {/* Header */}
+      <div className='relative w-full flex items-center px-6 py-3 border-[#0F2D1C] bg-[#F5F2EA] border-b-2 shrink-0 z-10'>
+        <Link href="/" className='flex items-center gap-1 text-base font-medium text-[#0F2D1C] hover:text-[#C4811A] transition'>
+          <ChevronLeftIcon className='w-6 h-6' /> Back
+        </Link>
+        <h1 className='text-xl font-bold text-[#0F2D1C] absolute left-1/2 -translate-x-1/2 tracking-wide uppercase'>Add a Study Spot</h1>
+      </div>
 
-        <div className="flex flex-1 gap-6 px-6 py-6 style={{ minHeight: 'calc(100vh - 57px)' }">
-          {/* Left Column */}
-          <div className="w-[50%] flex flex-col gap-4">
+      {/* Clear out flex constraints so columns can stack normally if they run out of vertical room */}
+      <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-6 px-6 py-6 items-stretch">
 
-            {/* Location Name */}
-            <div>
-              <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider">
-                Location Name <span className="text-[#B33A1A]">*</span>
-              </label>
-              <input
-                required
-                type="text"
-                placeholder="Eg. Campus Union Building - TLRC"
-                value={form.name}
-                onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                className={`w-full px-3 py-2 text-sm rounded-lg border outline-none focus:border-[#0F2D1C] bg-white text-[#0F2D1C] placeholder-[#D4CCBA] transition ${errors.name ? 'border-[#B33A1A] border-2' : 'border-[#D4CCBA]'}`}
-              />
-              {errors.name && <p className="text-xs text-[#B33A1A] mt-1">{errors.name}</p>}
-            </div>
+        {/* Left Column */}
+        <div className="w-full md:w-[50%] flex flex-col gap-4">
 
-            {/* Address */}
-            <div>
-              <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider">
-                Address <span className="text-[#B33A1A]">*</span>
-              </label>
-              <input
-                required
-                type="text"
-                value={form.address}
-                onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
-                className={`w-full px-3 py-2 text-sm rounded-lg border outline-none focus:border-[#0F2D1C] bg-white text-[#0F2D1C] placeholder-[#D4CCBA] transition ${errors.address ? 'border-[#B33A1A] border-2' : 'border-[#D4CCBA]'}`}
-              />
-              {errors.address && <p className="text-xs text-[#B33A1A] mt-1">{errors.address}</p>}
-            </div>
+          {/* Location Name */}
+          <div>
+            <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider">
+              Location Name <span className="text-[#B33A1A]">*</span>
+            </label>
+            <input
+              required
+              type="text"
+              placeholder="Eg. Campus Union Building - TLRC"
+              value={form.name}
+              onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+              className={`w-full px-3 py-2 text-sm rounded-lg border outline-none focus:border-[#0F2D1C] bg-white text-[#0F2D1C] placeholder-[#D4CCBA] transition ${errors.name ? 'border-[#B33A1A] border-2' : 'border-[#D4CCBA]'}`}
+            />
+            {errors.name && <p className="text-xs text-[#B33A1A] mt-1">{errors.name}</p>}
+          </div>
 
-            {/* Pin on map -- TODO: implement Leaflet API here*/}
+          {/* Address */}
+          <div>
+            <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider">
+              Address <span className="text-[#B33A1A]">*</span>
+            </label>
+            <input
+              required
+              type="text"
+              placeholder="Enter address manually or search using the map tool below..."
+              value={form.address}
+              onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+              className={`w-full px-3 py-2 text-sm rounded-lg border outline-none focus:border-[#0F2D1C] bg-white text-[#0F2D1C] placeholder-[#D4CCBA] transition ${errors.address ? 'border-[#B33A1A] border-2' : 'border-[#D4CCBA]'}`}
+            />
+            {errors.address && <p className="text-xs text-[#B33A1A] mt-1">{errors.address}</p>}
+          </div>
 
-            <div className="w-full flex-1 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-sm text-gray-400 bg-white">
-              [ Pin on map placeholder ]
-            </div>
+          {/* Map Section */}
+          <div className="w-full flex flex-col">
+            <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider flex items-center justify-between">
+              <span>Pin on map <span className="text-[#B33A1A]">*</span></span>
+              {form.lat && (
+                <span className="text-xs text-emerald-800 font-semibold lowercase tracking-normal">
+                  ✓ Pinned ({form.lat.toFixed(4)}, {form.lng.toFixed(4)})
+                </span>
+              )}
+            </label>
 
-            {/* Description */}
-            <div className='flex-1 flex flex-col'>
-              <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider">Description</label>
-              <textarea
-                placeholder="Describe the spot..."
-                value={form.description}
-                rows={4}
-                onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-[#D4CCBA] outline-none focus:border-[#0F2D1C] bg-white text-[#0F2D1C] placeholder:[#D4CCBA] resize-none transition"
-              />
+            <div className="w-full h-[350px] bg-white rounded-lg shadow-inner overflow-hidden border border-gray-200">
+              <AddSpotMap onLocationSelect={handleMapLocationSelect} />
             </div>
           </div>
 
-          {/* Right Columns */}
-          <div className="w-[50%] flex flex-col bg-[#0F2D1C] border border-[#c5e08a] rounded-2xl p-5 gap-4">
+          {/* Description */}
+          <div className='flex flex-col'>
+            <label className="text-xs font-bold text-[#0F2D1C] mb-1 block uppercase tracking-wider">Description</label>
+            <textarea
+              placeholder="Describe the spot..."
+              value={form.description}
+              rows={4}
+              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-[#D4CCBA] outline-none focus:border-[#0F2D1C] bg-white text-[#0F2D1C] placeholder-[#D4CCBA] resize-none transition"
+            />
+          </div>
+        </div>
 
-            {/* Descriptors for page */}
-            {TAG_GROUPS.map(({ label, category, values }) => (
-              <div key={category}>
-                <div className="text-[#CFA000] text-[10px] uppercase tracking-widest font-bold rounded-lg mb-2">
-                  {label}
-                </div>
+        {/* Right Column */}
+        <div className="w-full md:w-[50%] flex flex-col bg-[#0F2D1C] border rounded-2xl p-5 gap-4 border-[#1E4A2A] ">
+          <div>
+            <div className="text-[#CFA000] text-[10px] font-bold uppercase tracking-widest mb-2">
+              Opening Hours
+            </div>
+
+            {/* 24/7 toggle */}
+            <label className="flex items-center gap-2 mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_24hr ?? false}
+                onChange={e => setForm(p => ({ ...p, is_24hr: e.target.checked }))}
+                className="accent-[#CFA000]"
+              />
+              <span className="text-[10px] text-[#D4CCBA] uppercase tracking-wide">Open 24/7</span>
+            </label>
+            
+            {!form.is_24hr && (
+              <div className="flex flex-col gap-3">
+                {/* Days */}
                 <div className="flex flex-wrap gap-2">
-                  {values.map(val => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => handleTagClick(category, val)}
-                      className={`px-3 py-1 text-[10px] font-semibold rounded-full border transition uppercase tracking-wide ${selectedTags[category] === val
-                        ? 'bg-[#CFA000] text-[#0F2D1C] border-[#CFA000]'
-                        : 'bg-transparent text-[#D4CCBA] border-[#1E4A2A] hover:border-[#D4CCBA]'}`}
-                    >
-                      {val.replace(/_/g, ' ').toUpperCase()}
-                    </button>
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                    <label key={day} className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.opening_hours?.days?.includes(day) ?? false}
+                        onChange={e => {
+                          const days = form.opening_hours?.days ?? [];
+                          const updated = e.target.checked
+                            ? [...days, day]
+                            : days.filter(d => d !== day);
+                          setForm(p => ({ ...p, opening_hours: { ...p.opening_hours, days: updated } }));
+                        }}
+                        className="accent-[#CFA000]"
+                      />
+                      <span className="text-[10px] text-[#D4CCBA] uppercase tracking-wide">{day}</span>
+                    </label>
                   ))}
                 </div>
-              </div>
-            ))}
 
-            {/* Divider */}
-            <div className="border-t border-[#1E4A2A]" />
-
-            {/* Photo Uploader */}
-            <div>
-              <div className="text-[#CFA000] text-[10px] font-bold uppercase tracking-widest mb-2">
-                Photos
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <label className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-[#1E4A2A] rounded-lg cursor-pointer hover:border-[#D4CCBA] transition text-[#D4CCBA] text-xl">
-                  +
-                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
-                </label>
-                {images.map((src, i) => (
-                  <div key={i} className="relative w-16 h-16">
-                    <Image src={src} alt="" fill className="object-cover rounded-lg border border-[#1E4A2A]" />
-                    <button
-                      onClick={() => setImages(prev => prev.filter((_, idx) => idx !== i))}
-                      className="absolute -top-1 -right-1 w-4 h-4 bg-[#B33A1A] text-white rounded-full text-[10px] flex items-center justify-center"
-                    >
-                      <XMarkIcon className="w-3 h-3" />
-                    </button>
+                {/* Time inputs */}
+                <div className="flex gap-3 items-center">
+                  <div className="flex flex-col gap-1 flex-1">
+                    <span className="text-[9px] text-[#D4CCBA] uppercase tracking-wide">Opens</span>
+                    <input
+                      type="time"
+                      className="w-full px-2 py-1.5 text-[10px] rounded-md bg-[#1E4A2A] border border-[#2E6B3E] text-[#D4CCBA] outline-none focus:border-[#CFA000]"
+                      onChange={e => setForm(p => ({ ...p, opening_hours: { ...p.opening_hours, open: e.target.value } }))}
+                    />
                   </div>
+                  <span className="text-[#D4CCBA] text-xs mt-4">—</span>
+                  <div className="flex flex-col gap-1 flex-1">
+                    <span className="text-[9px] text-[#D4CCBA] uppercase tracking-wide">Closes</span>
+                    <input
+                      type="time"
+                      className="w-full px-2 py-1.5 text-[10px] rounded-md bg-[#1E4A2A] border border-[#2E6B3E] text-[#D4CCBA] outline-none focus:border-[#CFA000]"
+                      onChange={e => setForm(p => ({ ...p, opening_hours: { ...p.opening_hours, close: e.target.value } }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+          </div>
+
+          {/* Descriptors */}
+          {TAG_GROUPS.map(({ label, category, values }) => (
+            <div key={category}>
+              <div className="text-[#CFA000] text-[10px] uppercase tracking-widest font-bold rounded-lg mb-2">
+                {label}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {values.map(val => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => handleTagClick(category, val)}
+                    className={`px-3 py-1 text-[10px] font-semibold rounded-full border transition uppercase tracking-wide ${selectedTags[category] === val
+                      ? 'bg-[#CFA000] text-[#0F2D1C] border-[#CFA000]'
+                      : 'bg-transparent text-[#D4CCBA] border-[#1E4A2A] hover:border-[#D4CCBA]'}`}
+                  >
+                    {val.replace(/_/g, ' ').toUpperCase()}
+                  </button>
                 ))}
               </div>
             </div>
+          ))}
 
-            {/* Submit -- TODO: onCLick - data should be add to database */}
-            <button
-              type="button"
-              onClick={handleSubmit}
-              className="mt-auto w-full py-2.5 text-sm font-bold rounded-xl bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition-all duration-200 uppercase tracking-widest flex items-center justify-center gap-2 group"
-            >
-              SUBMIT STUDY SPOT
-            </button>
+          <div className="border-t border-[#1E4A2A]" />
+
+          {/* Photo Uploader */}
+          <div>
+            <div className="text-[#CFA000] text-[10px] font-bold uppercase tracking-widest mb-2">
+              Photos <span className="text-[#D4CCBA] font-normal normal-case tracking-normal">({images.length}/5)</span>
+            </div>
+            <div className="flex gap-4 flex-wrap">
+              <label className="w-30 h-30 flex items-center justify-center border-2 border-dashed border-[#1E4A2A] rounded-lg cursor-pointer hover:border-[#D4CCBA] transition text-[#D4CCBA] text-2xl">
+                +
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+              </label>
+              {images.map((img, i) => (
+                <div key={i} className="relative w-30 h-30">
+                  <Image src={img.preview} alt="" fill className="object-cover rounded-lg border border-[#1E4A2A]" />
+                  <button
+                    type="button"
+                    onClick={() => setImages(prev => prev.filter((_, idx) => idx !== i))}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-[#B33A1A] text-white rounded-full text-[10px] flex items-center justify-center"
+                  >
+                    <XMarkIcon className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Submit Button */}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="mt-auto w-full py-2.5 text-sm font-bold rounded-xl bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition-all duration-200 uppercase tracking-widest flex items-center justify-center gap-2 group shrink-0"
+          >
+            SUBMIT STUDY SPOT
+          </button>
         </div>
+
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 import './globals.css'
 import "leaflet/dist/leaflet.css";
 import { usePathname } from 'next/navigation'
-
+import { SearchProvider } from '@/context/SearchContext'
 // import font
 import { Inter, Poppins } from 'next/font/google'
 
@@ -30,10 +30,12 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en">
-      <body className={`bg-[#F5F2EA] ${inter.variable} ${poppins.variable} antialiased overflow-hidden`}>
-        {!shouldHideSearchbar && <Searchbar />}
-        {children}
-        {!shouldHideNavbar && <Navbar />}
+      <body className={`bg-[#F5F2EA] ${inter.variable} ${poppins.variable} antialiased ${pathname === '/' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <SearchProvider>
+          {!shouldHideSearchbar && <Searchbar />}
+          {children}
+          {!shouldHideNavbar && <Navbar />}
+        </SearchProvider>
       </body>
     </html>
   )
