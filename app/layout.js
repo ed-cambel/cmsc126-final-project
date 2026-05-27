@@ -1,5 +1,6 @@
 'use client'
 import './globals.css'
+import "leaflet/dist/leaflet.css";
 import { usePathname } from 'next/navigation'
 import { SearchProvider } from '@/context/SearchContext'
 // import font
