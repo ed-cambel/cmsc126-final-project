@@ -8,6 +8,9 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Filterbar from '@/components/Filterbar';
 import { createClient } from '@/lib/supabase/client';
+import { BookmarkIcon } from '@heroicons/react/24/outline';
+import { BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
+import { useRouter } from 'next/navigation';
 
 const supabase = createClient();
 
@@ -53,8 +56,8 @@ function StarRating({ rating }) {
 function TagPill({ label, dark }) {
   return (
     <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold tracking-wide whitespace-nowrap uppercase border ${dark
-        ? 'bg-[#0F2D1C] text-[#F5F2EA] border-[#1E4A2A]'
-        : 'bg-[#F5F2EA] text-[#0F2D1C] border-[#0F2D1C]'
+      ? 'bg-[#0F2D1C] text-[#F5F2EA] border-[#1E4A2A]'
+      : 'bg-[#F5F2EA] text-[#0F2D1C] border-[#0F2D1C]'
       }`}>
       {label}
     </span>
@@ -75,8 +78,9 @@ function SectionHeader({ title }) {
 }
 
 // card component for each spot in each category
-function SpotCard({ spot, active }) {
-  // 🛠️ FIXED: Ensuring true boolean flags map seamlessly alongside data strings
+function SpotCard({ spot, savedIds, onBookmark }) {
+  const [hovered, setHovered] = useState(false);
+  const isBookmarked = savedIds?.has(spot.id);
   const tags = [
     (spot.has_wifi === true || String(spot.has_wifi) === 'true') ? getFilterLabel('connectivity', 'wifi') : null,
     (spot.has_outlets === true || String(spot.has_outlets) === 'true') ? getFilterLabel('connectivity', 'outlet') : null,
@@ -86,16 +90,24 @@ function SpotCard({ spot, active }) {
   ].filter(Boolean);
 
   const displayImage = spot.photos?.[0]?.storage_url;
-  const [hovered, setHovered] = useState(false);
 
   return (
     <Link
+      href={`/spot/${spot.id}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      href={`/spot/${spot.id}`}
-      className="shrink-0 w-56 h-64 rounded-2xl border border-[#D4CCBA] p-3 flex flex-col gap-2 transition bg-[#F5F2EA] hover:bg-[#1E4A2A] hover:border-[#0F2D1C] hover:shadow-lg"
+      className="shrink-0 w-56 h-64 rounded-2xl border border-[#D4CCBA] p-3 flex flex-col gap-2 transition bg-[#F5F2EA] hover:bg-[#1E4A2A] hover:border-[#0F2D1C] hover:shadow-lg relative"
     >
-      {/* photo */}
+      {/* Bookmark button */}
+      <button
+        onClick={e => onBookmark(e, spot.id)}
+        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-[#0F2D1C] flex items-center justify-center shadow hover:bg-[#1E4A2A] transition"
+      >
+        {isBookmarked
+          ? <BookmarkSolidIcon className="w-4 h-4 text-[#CFA000]" />
+          : <BookmarkIcon className="w-4 h-4 text-[#D4CCBA]" />}
+      </button>
+
       <div className="w-full h-32 rounded-xl bg-[#EBE6D8] flex items-center justify-center text-[#6B6355] text-xs overflow-hidden shrink-0">
         {displayImage
           ? <img src={displayImage} alt={spot.name} className="w-full h-full object-cover" />
@@ -119,14 +131,15 @@ function SpotCard({ spot, active }) {
 }
 
 // title: section heading, spots: array of spot objects
-function HorizontalSection({ title, spots }) {
+function HorizontalSection({ title, spots, savedIds, onBookmark }) {
   if (!spots || spots.length === 0) return null;
-
   return (
     <div className="flex flex-col">
       <SectionHeader title={title} />
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {spots.map((spot, i) => <SpotCard key={spot.id} spot={spot} active={i === 0} />)}
+        {spots.map(spot => (
+          <SpotCard key={spot.id} spot={spot} savedIds={savedIds} onBookmark={onBookmark} />
+        ))}
       </div>
     </div>
   );
@@ -137,6 +150,9 @@ export default function DiscoverPage() {
   const [featured, setFeatured] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState({});
+  const [savedIds, setSavedIds] = useState(new Set());
+  const [currentUser, setCurrentUser] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -156,6 +172,17 @@ export default function DiscoverPage() {
       }
 
       setSpots(data || []);
+
+      // checks if spot is bookmarked by current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: savedData } = await supabase
+          .from('saved_spots')
+          .select('spot_id')
+          .eq('user_id', user.id);
+        setSavedIds(new Set(savedData?.map(s => s.spot_id) ?? []));
+        setCurrentUser(user);
+      }
 
       const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       let { data: featuredData } = await supabase
@@ -180,6 +207,25 @@ export default function DiscoverPage() {
 
     fetchData();
   }, []);
+
+  const handleBookmark = async (e, spotId) => {
+    e.preventDefault(); // prevent Link navigation
+    if (!currentUser) { router.push('/login'); return; }
+
+    if (savedIds.has(spotId)) {
+      await supabase
+        .from('saved_spots')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('spot_id', spotId);
+      setSavedIds(prev => { const next = new Set(prev); next.delete(spotId); return next; });
+    } else {
+      await supabase
+        .from('saved_spots')
+        .insert({ user_id: currentUser.id, spot_id: spotId });
+      setSavedIds(prev => new Set(prev).add(spotId));
+    }
+  };
 
   const filteredSpots = useMemo(() => {
     return spots.filter(spot => {
@@ -235,16 +281,16 @@ export default function DiscoverPage() {
                     </div>
                     <p className="text-xs text-[#6B6355] line-clamp-3">{featured.description}</p>
 
-                      <div className="flex flex-wrap gap-1">
-                        {[
-                          featured.has_wifi ? getFilterLabel('connectivity', 'wifi') : null,
-                          featured.noise_level ? getFilterLabel('noise', featured.noise_level) : null,
-                          featured.environment ? getFilterLabel('environment', featured.environment) : null,
-                          featured.location_type ? getFilterLabel('location', featured.location_type) : null,
-                        ].filter(Boolean).slice(0, 3).map((tag, i) => (
-                          <TagPill key={i} label={tag} />
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        featured.has_wifi ? getFilterLabel('connectivity', 'wifi') : null,
+                        featured.noise_level ? getFilterLabel('noise', featured.noise_level) : null,
+                        featured.environment ? getFilterLabel('environment', featured.environment) : null,
+                        featured.location_type ? getFilterLabel('location', featured.location_type) : null,
+                      ].filter(Boolean).slice(0, 3).map((tag, i) => (
+                        <TagPill key={i} label={tag} />
+                      ))}
+                    </div>
                   </div>
                   <button type="button" className="w-full py-2 text-xs font-bold rounded-lg bg-[#C4811A] text-[#F5F2EA] hover:bg-[#CFA000] hover:text-[#0F2D1C] transition tracking-widest uppercase">
                     VIEW SPOT
@@ -260,11 +306,11 @@ export default function DiscoverPage() {
             <div className="text-xs text-[#0F2D1C]">Loading spots...</div>
           ) : (
             <>
-              <HorizontalSection title="Top-Rated" spots={topRated} />
-              <HorizontalSection title="Recently Added" spots={recentlyAdded} />
-              <HorizontalSection title="Best for Studying" spots={bestForStudying} />
-              <HorizontalSection title="Hidden Gems" spots={hiddenGems} />
-              <HorizontalSection title="Outdoor Spots" spots={outdoor} />
+              <HorizontalSection title="Top-Rated" spots={topRated} savedIds={savedIds} onBookmark={handleBookmark} />
+              <HorizontalSection title="Recently Added" spots={recentlyAdded} savedIds={savedIds} onBookmark={handleBookmark} />
+              <HorizontalSection title="Best for Studying" spots={bestForStudying} savedIds={savedIds} onBookmark={handleBookmark} />
+              <HorizontalSection title="Hidden Gems" spots={hiddenGems} savedIds={savedIds} onBookmark={handleBookmark} />
+              <HorizontalSection title="Outdoor Spots" spots={outdoor} savedIds={savedIds} onBookmark={handleBookmark} />
             </>
           )}
         </div>

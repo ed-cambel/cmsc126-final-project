@@ -6,7 +6,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { UserCircleIcon, ChevronLeftIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon, ChevronLeftIcon, MapPinIcon, ClockIcon, BookmarkIcon } from '@heroicons/react/24/outline';
+import { BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
 import { createClient } from '@/lib/supabase/client';
 
 const supabase = createClient();
@@ -67,6 +68,8 @@ export default function SpotPage() {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarking, setBookmarking] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -84,6 +87,17 @@ export default function SpotPage() {
         if (spotError || !spotData) {
           setLoading(false);
           return;
+        }
+
+        // check if bookmarked
+        if (currentUser) {
+          const { data: savedData } = await supabase
+            .from('saved_spots')
+            .select('spot_id')
+            .eq('user_id', currentUser.id)
+            .eq('spot_id', id)
+            .maybeSingle();
+          setBookmarked(!!savedData);
         }
 
         const { data: photosData } = await supabase
@@ -171,6 +185,26 @@ export default function SpotPage() {
     setSubmitting(false);
   };
 
+  const handleBookmark = async () => {
+    if (!user) { router.push('/login'); return; }
+    setBookmarking(true);
+
+    if (bookmarked) {
+      await supabase
+        .from('saved_spots')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('spot_id', id);
+      setBookmarked(false);
+    } else {
+      await supabase
+        .from('saved_spots')
+        .insert({ user_id: user.id, spot_id: id });
+      setBookmarked(true);
+    }
+    setBookmarking(false);
+  };
+
   const tags = spot ? [
     spot.has_wifi ? 'WiFi' : 'No WiFi',
     spot.has_outlets ? 'Outlet' : null,
@@ -206,9 +240,20 @@ export default function SpotPage() {
         <Link href="/" className='flex items-center gap-1 text-base font-medium text-[#0F2D1C] hover:text-[#C4811A] transition'>
           <ChevronLeftIcon className='w-6 h-6' /> Back
         </Link>
+        
         <h1 className="text-xl font-bold text-[#0F2D1C] absolute left-1/2 -translate-x-1/2 tracking-wide uppercase">
           {spot.name}
         </h1>
+
+        <button
+          onClick={handleBookmark}
+          disabled={bookmarking}
+          className="ml-auto flex items-center gap-1 text-[#0F2D1C] hover:text-[#C4811A] transition disabled:opacity-50"
+        >
+          {bookmarked
+            ? <BookmarkSolidIcon className="w-6 h-6 text-[#C4811A]" />
+            : <BookmarkIcon className="w-6 h-6" />}
+        </button>
       </div>
 
       <div className="flex h-[calc(100vh-49px)]">
