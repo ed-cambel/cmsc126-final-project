@@ -66,10 +66,14 @@ export default function SignupPage() {
       if (error) throw error;
 
       const user = data.user;
-
       if (!user) throw new Error("No user returned");
 
-      // INSERT PROFILE USING FORM DATA
+      // If the email already exists, identities will be an empty array [].
+      if (!user.identities || user.identities.length === 0) {
+        throw new Error('This email is already registered.');
+      }
+
+      // INSERT PROFILE USING FORM DATA (Only runs if user identity is confirmed unique)
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -84,7 +88,7 @@ export default function SignupPage() {
 
       if (profileError) throw profileError;
 
-      setSuccessMsg('Account created successfully!');
+      setSuccessMsg('Account created successfully! Check your email to confirm your account.');
 
       setTimeout(() => {
         router.push('/login');
