@@ -64,13 +64,13 @@ function SpotRow({ spot, actionLabel, onAction }) {
             <div className="flex items-center gap-2 flex-shrink-0">
                 <Link
                     href={`/spot/${spot.id}`}
-                    className="text-xs font-semibold px-3 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition"
+                    className="text-xs font-bold px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition"
                 >
                     VIEW
                 </Link>
                 <button
                     onClick={() => onAction(spot.id)}
-                    className={`text-xs font-semibold px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 transition ${actionLabel === 'REMOVE' || actionLabel === 'DELETE' ? 'hover:text-red-600 hover:border-red-200' : ''}`}
+                    className={`text-xs font-bold px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition ${actionLabel === 'REMOVE' ? 'hover:text-red-600 hover:border-red-200' : ''}`}
                 >
                     {actionLabel}
                 </button>
@@ -301,11 +301,8 @@ export default function ProfilePage() {
                             <SpotRow 
                                 key={spot.id} 
                                 spot={spot} 
-                                actionLabel="DELETE" 
-                                onAction={(id) => {
-                                    setSelectedContribId(id);
-                                    setShowContribModal(true);
-                                }} 
+                                actionLabel="EDIT"
+                                onAction={(id) => router.push(`/edit-spot/${id}`)} 
                             />
                         ))
                     )}
@@ -365,6 +362,31 @@ export default function ProfilePage() {
                             )}
                             <div className="text-xs text-gray-400 w-full text-center truncate">
                                 {email}
+                            </div>
+
+                            {/* ── ACADEMIC INFO BLOCK ── */}
+                            <div className="mt-3 pt-3 border-t border-dashed border-gray-200 flex flex-col items-center text-center w-full gap-1">
+                                {userProfile?.college ? (
+                                    <div className="text-[11px] font-bold text-gray-600 uppercase tracking-wider text-center">
+                                        {userProfile.college}
+                                    </div>
+                                ) : (
+                                    <div className="text-[11px] font-bold text-gray-300 uppercase tracking-wider italic">
+                                        No College Set
+                                    </div>
+                                )}
+                                
+                                {(userProfile?.degree_program || userProfile?.year_level) ? (
+                                    <div className="text-xs text-gray-500 max-w-full truncate font-medium text-center">
+                                        {userProfile.degree_program}
+                                        {userProfile.degree_program && userProfile.year_level && ' · '}
+                                        {userProfile.year_level}
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-gray-300 font-medium italic">
+                                        No Degree / Year Set
+                                    </div>
+                                )}
                             </div>
                         </div>
 
