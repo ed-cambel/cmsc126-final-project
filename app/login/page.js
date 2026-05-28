@@ -51,16 +51,6 @@ export default function LoginPage() {
     if (error) setErrorMsg(error.message);
   }
 
-  async function handleGoogleLogin() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) setErrorMsg(error.message);
-  }
-
   async function continueAsGuest() {
     setLoading(true);
     await supabase.auth.signOut();
@@ -133,9 +123,9 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between text-xs text-[#D4CCBA] mt-0.5">
-              
 
-              
+
+
             </div>
 
             {errorMsg && (
@@ -152,7 +142,7 @@ export default function LoginPage() {
               {loading ? 'LOGGING IN...' : 'LOG IN'}
             </button>
 
-              {/* Google sign-in */}
+            {/* Google sign-in */}
             <button
               type="button"
               onClick={handleGoogleLogin}
