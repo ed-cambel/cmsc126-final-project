@@ -78,7 +78,7 @@ export default function SignupPage() {
         .from('profiles')
         .insert({
           id: user.id,
-          username: formData.email,
+          username: formData.email.split('@')[0],
           first_name: formData.firstName,
           last_name: formData.lastName,
           college: formData.college,
