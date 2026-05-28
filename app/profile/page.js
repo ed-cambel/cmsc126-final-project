@@ -1,4 +1,5 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -119,9 +120,13 @@ export default function ProfilePage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState('saved');
     
-    // ── Modal States ──
+    // ── Saved Spots Modal States ──
     const [showModal, setShowModal] = useState(false);
     const [selectedSpotId, setSelectedSpotId] = useState(null);
+
+    // ── Contributions Manage/Delete Modal States ──
+    const [showContribModal, setShowContribModal] = useState(false);
+    const [selectedContribId, setSelectedContribId] = useState(null);
 
     // ── Data States ──
     const [userAuth, setUserAuth] = useState(null);
@@ -217,7 +222,7 @@ export default function ProfilePage() {
         { id: 'reviews', label: 'My reviews', count: reviews.length },
     ];
 
-    // ── Handlers for Custom Modal ──
+    // ── Handlers for Saved Spots Modal ──
     const handleRemoveClick = (spotId) => {
         setSelectedSpotId(spotId);
         setShowModal(true); 
@@ -240,6 +245,27 @@ export default function ProfilePage() {
 
         setShowModal(false);
         setSelectedSpotId(null);
+    };
+
+    // ── Handler for Contribution Permanent Deletion ──
+    const confirmDeleteContribution = async () => {
+        if (!userAuth || !selectedContribId) return;
+
+        const { error } = await supabase
+            .from('spots')
+            .delete()
+            .eq('id', selectedContribId)
+            .eq('added_by', userAuth.id); // Guard safety measure
+
+        if (error) {
+            console.error('Error deleting spot:', error.message);
+        } else {
+            setContributions((prevSpots) => prevSpots.filter(spot => spot.id !== selectedContribId));
+            setSavedSpots((prevSpots) => prevSpots.filter(spot => spot.id !== selectedContribId));
+        }
+
+        setShowContribModal(false);
+        setSelectedContribId(null);
     };
 
     const TAB_CONTENT = {
@@ -431,7 +457,7 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            {/* ── CUSTOM CONFIRMATION MODAL ── */}
+            {/* ── CUSTOM CONFIRMATION MODAL (SAVED SPOTS) ── */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 transition-opacity">
                     <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl flex flex-col gap-4 border border-gray-100">
@@ -457,6 +483,39 @@ export default function ProfilePage() {
                                 className="px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition shadow-sm"
                             >
                                 YES, REMOVE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── CUSTOM OPTIONS & DELETION MODAL (MY CONTRIBUTIONS) ── */}
+            {showContribModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 transition-opacity">
+                    <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl flex flex-col gap-4 border border-gray-100">
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Delete Contribution</h3>
+                            <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                                Are you sure you want to delete this contribution? Doing so will clear it permanently from our map logs.
+                            </p>
+                        </div>
+                        
+                        <div className="flex gap-2 justify-end mt-2">
+                            <button 
+                                onClick={() => {
+                                    setShowContribModal(false);
+                                    setSelectedContribId(null);
+                                }}
+                                className="px-4 py-2 text-xs font-semibold text-gray-500 hover:bg-gray-100 rounded-lg transition"
+                            >
+                                CANCEL
+                            </button>
+                            
+                            <button 
+                                onClick={confirmDeleteContribution}
+                                className="px-4 py-2 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition uppercase tracking-wider shadow-sm"
+                            >
+                                YES, DELETE PERMANENTLY
                             </button>
                         </div>
                     </div>
