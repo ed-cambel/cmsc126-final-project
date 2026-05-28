@@ -10,14 +10,25 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 // HELPER MAP CONTROLLER
 function MapController({ center, searchLocation, zoomTrigger, locateTrigger, activeSpot }) {
   const map = useMap();
+  // Declare the tracking state right here inside the controller
+  const [hasInitialPan, setHasInitialPan] = useState(false);
 
   // Smoothly pan the map view when the user's real location is fetched
   useEffect(() => {
-    if (center) {
+    if (center && !hasInitialPan) {
       map.flyTo(center, 17); 
+      setHasInitialPan(true); // Locks it so it won't run again automatically
     }
-  }, [center, map]);
+  }, [center, map, hasInitialPan]);
 
+  // Inside your MapController layout component
+  useEffect(() => {
+    if (locateTrigger > 0 && center) {
+      map.flyTo(center, 18);
+    }
+  }, [locateTrigger]); // <-- Keep ONLY locateTrigger here to avoid data recalculation loops
+
+  // 2. Pan to searched area smoothly when search changes
   useEffect(() => {
     if (searchLocation) {
       map.flyTo(searchLocation, 17); 
@@ -40,7 +51,7 @@ function MapController({ center, searchLocation, zoomTrigger, locateTrigger, act
     }
   }, [locateTrigger, center, map]);
 
-  // FEATURE: Pan to spot location when clicked on the list container
+  // Pan to spot location when clicked on the list container
   useEffect(() => {
     if (activeSpot) {
       const lat = activeSpot.lat || activeSpot.latitude;
@@ -135,7 +146,7 @@ export default function Map({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* send the triggers directly into the controller component */}
+        {/* Clean props passed into the controller */}
         <MapController 
           center={centerLocation} 
           searchLocation={searchLocation} 
@@ -163,7 +174,7 @@ export default function Map({
           </Marker>
         )}
 
-        {/* FEATURE: Dynamic Database Spot Markers */}
+        {/* Dynamic Database Spot Markers */}
         {spots.map((spot) => {
           const lat = spot.lat || spot.latitude;
           const lng = spot.lng || spot.longitude;

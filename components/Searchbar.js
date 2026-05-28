@@ -1,7 +1,3 @@
-// components/Searchbar.js
-// allows users to search for study spots by name
-// available on select pages only
-
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
@@ -15,7 +11,8 @@ import { useRouter } from 'next/navigation';
 const supabase = createClient();
 
 export default function Searchbar() {
-    const { setSearchLocation } = useSearch();
+    // Pull setLocateTrigger from your context layer
+    const { setSearchLocation, setLocateTrigger } = useSearch();
     const [searchQuery, setSearchQuery] = useState("");
     const [suggestions, setSuggestions] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -55,7 +52,6 @@ export default function Searchbar() {
                             lon: spot.lng,
                             isSpot: true,
                             spotId: spot.id
-
                         })
                     });
                 }
@@ -88,14 +84,16 @@ export default function Searchbar() {
 
         const latlng = [parseFloat(item.lat), parseFloat(item.lon)];
         setSearchQuery(item.display_name);
+        
+        //Clear the ca mera lock before initiating the transition
+        if (setLocateTrigger) setLocateTrigger(0); 
+        
         setSearchLocation(latlng);
-        // setPinnedLocation(latlng);
         setShowDropdown(false);
     };
 
     return (
         <header className='font-sans flex items-center gap-3 px-4 py-2.5 bg-[#0F2D1C] border-1.5 border-gray-200'>
-
             {/* Logo */}
             <Link href="#" className='font-sans flex items-center gap-2 shrink-0'>
                 <div className='w-8 h-8 rounded-full flex items-center justify-center shrink-0'>
@@ -161,7 +159,6 @@ export default function Searchbar() {
             <Link href="/profile" className='w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 border-[#2E6B3E] hover:border-[#C4811A] transition'>
                 <UserIcon className='w-7 h-7 text-[#A8C4A0]' />
             </Link>
-
         </header>
     )
 }
